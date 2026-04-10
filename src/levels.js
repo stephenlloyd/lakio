@@ -228,12 +228,16 @@ const WorldData = [
                     { type: 'mushroom', x: 22, y: 25, patrol: 3 },
                     { type: 'glowbug', x: 20, y: 19, patrol: 5 },
                     { type: 'thornball', x: 35, y: 23, patrol: 2, bounce: true },
+                    { type: 'orbiter', x: 40, y: 20, patrol: 3, flying: true },
                     { type: 'mushroom', x: 44, y: 25, patrol: 4 },
                     { type: 'glowbug', x: 50, y: 20, patrol: 4 },
+                    { type: 'spinner', x: 58, y: 22, patrol: 0, flying: true },
                     { type: 'mushroom', x: 54, y: 25, patrol: 3 },
                     { type: 'thornball', x: 66, y: 25, patrol: 5, bounce: true },
+                    { type: 'orbiter', x: 70, y: 18, patrol: 4, flying: true },
                     { type: 'mushroom', x: 72, y: 25, patrol: 3 },
                     { type: 'glowbug', x: 76, y: 16, patrol: 4 },
+                    { type: 'spinner', x: 80, y: 20, patrol: 0, flying: true },
                     { type: 'mushroom', x: 84, y: 25, patrol: 4 },
                     { type: 'glowbug', x: 90, y: 22, patrol: 3 },
                     { type: 'mushroom', x: 94, y: 25, patrol: 2 },
@@ -254,57 +258,63 @@ const WorldData = [
                     const m = [];
                     for (let y = 0; y < H; y++) m[y] = row(W, '0');
                     for (let y = 27; y < H; y++) for (let x = 0; x < W; x++) m[y] = placeInRow(m[y], x, '1');
-                    // Approach - get shield power
+                    // Approach area
                     m[26] = placeInRow(m[26], 0, '11111111111111111111');
                     m[24] = placeInRow(m[24], 4, '2222');
                     m[22] = placeInRow(m[22], 8, '040');
                     m[24] = placeInRow(m[24], 14, '0S0');
                     m[23] = placeInRow(m[23], 13, '11111');
                     m[25] = placeInRow(m[25], 18, '7');
-                    // Boss arena - enclosed box
+                    // Boss arena - open entrance on left side
                     m[26] = placeInRow(m[26], 20, '11111111111111111111111111111111111');
-                    for (let y = 15; y < 27; y++) {
+                    // Left wall with entrance gap (rows 24-26 open for walking in)
+                    for (let y = 15; y < 24; y++) {
                         m[y] = placeInRow(m[y], 20, '1');
+                    }
+                    // Right wall solid + exit door
+                    for (let y = 15; y < 27; y++) {
                         m[y] = placeInRow(m[y], 54, '1');
                     }
                     m[15] = placeInRow(m[15], 20, '11111111111111111111111111111111111');
-                    // Arena platforms - easy to reach (max 3 tiles between)
-                    // Ground level platforms
-                    m[24] = placeInRow(m[24], 23, '2222');
-                    m[24] = placeInRow(m[24], 33, '222222');
-                    m[24] = placeInRow(m[24], 45, '2222');
-                    // Mid level - reachable with single jump from ground plats
-                    m[22] = placeInRow(m[22], 26, '222');
-                    m[22] = placeInRow(m[22], 35, '2222');
-                    m[22] = placeInRow(m[22], 43, '222');
-                    // Upper level - reachable with double jump from mid
-                    m[20] = placeInRow(m[20], 29, '222');
-                    m[20] = placeInRow(m[20], 38, '222');
-                    // Top platforms near boss
+                    // Arena platforms — prisms sit ON these
+                    // Ground level
+                    m[24] = placeInRow(m[24], 23, '22222');   // RED prism here
+                    m[24] = placeInRow(m[24], 33, '222222');  // pedestals below
+                    m[24] = placeInRow(m[24], 45, '22222');
+                    // Mid level
+                    m[22] = placeInRow(m[22], 26, '2222');
+                    m[22] = placeInRow(m[22], 35, '22222');
+                    m[22] = placeInRow(m[22], 42, '22222');   // GREEN prism here
+                    // Upper level
+                    m[20] = placeInRow(m[20], 29, '2222');    // BLUE prism here
+                    m[20] = placeInRow(m[20], 38, '2222');
+                    // Top platforms
                     m[18] = placeInRow(m[18], 32, '222222');
-                    // Exit (after boss defeated)
+                    // Exit
                     m[25] = placeInRow(m[25], 53, '5');
                     return m;
                 })(),
                 isBoss: true,
                 bossType: 'entropy',
-                // Prism puzzle data
                 bossPuzzle: {
                     type: 'prism',
                     prisms: [
-                        { color: 'red', x: 24, y: 23 },
-                        { color: 'green', x: 42, y: 21 },
-                        { color: 'blue', x: 30, y: 19 },
+                        { color: 'red', x: 25, y: 23 },   // on row 24 platform
+                        { color: 'green', x: 44, y: 21 }, // on row 22 platform
+                        { color: 'blue', x: 31, y: 19 },  // on row 20 platform
                     ],
                     pedestals: [
-                        { x: 34, y: 25, color: null },
+                        { x: 35, y: 25, color: null },
                         { x: 37, y: 25, color: null },
-                        { x: 40, y: 25, color: null },
+                        { x: 39, y: 25, color: null },
                     ],
                     roundsToWin: 3,
                 },
-                enemies: [],
-                hint: 'Collect the 3 PRISMS (R,G,B) and\nplace them on the pedestals!\nWhite light defeats the boss!',
+                enemies: [
+                    { type: 'orbiter', x: 30, y: 22, patrol: 3, flying: true },
+                    { type: 'orbiter', x: 44, y: 20, patrol: 3, flying: true },
+                ],
+                hint: 'Collect R, G, B PRISMS from platforms.\nPlace on pedestals to make WHITE LIGHT!\nShoot enemies with X. 3 rounds to win!',
             }
         ]
     },
@@ -352,7 +362,7 @@ const WorldData = [
                     m[11] = placeInRow(m[11], 25, '2222222');
                     m[20] = placeInRow(m[20], 24, '222');
                     m[9] = placeInRow(m[9], 28, '2222');
-                    m[7] = placeInRow(m[7], 30, '0D0');
+                    m[7] = placeInRow(m[7], 30, '0M0');
                     m[6] = placeInRow(m[6], 29, '11111');
                     // Bridge to normal section - stepping stones
                     m[26] = placeInRow(m[26], 35, '1111111111111111');
@@ -565,13 +575,16 @@ const WorldData = [
                 enemies: [
                     { type: 'spark', x: 14, y: 25, patrol: 3 },
                     { type: 'coilbot', x: 20, y: 25, patrol: 4 },
+                    { type: 'spinner', x: 28, y: 20, patrol: 0, flying: true },
                     { type: 'spark', x: 34, y: 25, patrol: 5 },
                     { type: 'coilbot', x: 42, y: 25, patrol: 3 },
+                    { type: 'orbiter', x: 48, y: 20, patrol: 3, flying: true },
                     { type: 'spark', x: 52, y: 25, patrol: 4 },
                     { type: 'coilbot', x: 60, y: 25, patrol: 3 },
+                    { type: 'spinner', x: 66, y: 20, patrol: 0, flying: true },
                     { type: 'spark', x: 70, y: 25, patrol: 4 },
                 ],
-                hint: 'Step on SWITCHES to open gates!\nSome gates need multiple switches.',
+                hint: 'Step on SWITCHES to open gates!\nShoot SPINNERS before they fire!',
             },
             {
                 name: '3-2: CONDUCTOR',
@@ -599,7 +612,7 @@ const WorldData = [
                     m[21] = placeInRow(m[21], 34, '22222');
                     m[20] = placeInRow(m[20], 38, '11111');
                     // Switch 2 upper
-                    m[18] = placeInRow(m[18], 36, '04040');
+                    m[18] = placeInRow(m[18], 36, '04Z40');
                     m[17] = placeInRow(m[17], 35, '2222222');
                     // Continue
                     m[26] = placeInRow(m[26], 46, '111111111111111111111111');

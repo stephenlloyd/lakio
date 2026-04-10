@@ -676,6 +676,8 @@ const TileSprites = {
             dash: ['#ff6644', '#ff8866', '#ffaa88'],
             shield: ['#44aaff', '#66ccff', '#88eeff'],
             float: ['#aa44ff', '#cc66ff', '#ee88ff'],
+            magnet: ['#ffcc00', '#ffdd44', '#ffee88'],
+            timeslow: ['#44ffaa', '#88ffcc', '#bbffee'],
         };
         const c = colors[type] || colors.dash;
         // Glowing orb
@@ -1020,6 +1022,51 @@ const EnemySprites = {
         pixel(cx, 7, 7, '#ffffff');
     }),
 
+    // Orbiter - rotates around a center point (glowing orb with trail)
+    orbiter: (frame, dir) => getCachedSprite('e_orbiter_' + (Math.floor(frame/2) % 8), 16, 16, (cx) => {
+        const f = Math.floor(frame/2) % 8;
+        // Glowing core
+        fillRect(cx, 5, 5, 6, 6, '#ff8844');
+        fillRect(cx, 6, 4, 4, 1, '#ff8844');
+        fillRect(cx, 6, 11, 4, 1, '#ff8844');
+        fillRect(cx, 4, 6, 1, 4, '#ff8844');
+        fillRect(cx, 11, 6, 1, 4, '#ff8844');
+        // Inner white-hot
+        fillRect(cx, 6, 6, 4, 4, '#ffcc44');
+        fillRect(cx, 7, 7, 2, 2, '#ffffff');
+        // Rotating flame trail
+        const trails = [[2,3],[12,3],[2,11],[12,11],[7,1],[7,13],[1,7],[13,7]];
+        trails.forEach((t, i) => {
+            if ((i + f) % 3 === 0) pixel(cx, t[0], t[1], '#ff660088');
+        });
+    }),
+
+    // Spinner - spins in place, shoots in 4 directions periodically
+    spinner: (frame) => getCachedSprite('e_spinner_' + (Math.floor(frame/3) % 8), 16, 16, (cx) => {
+        const f = Math.floor(frame/3) % 8;
+        const angle = f * 0.8;
+        // Central body
+        fillRect(cx, 5, 5, 6, 6, '#aa5599');
+        fillRect(cx, 6, 4, 4, 8, '#aa5599');
+        fillRect(cx, 4, 6, 8, 4, '#aa5599');
+        // Rotating blades
+        const bladePositions = [
+            [3 + Math.cos(angle) * 4, 3 + Math.sin(angle) * 4],
+            [3 - Math.cos(angle) * 4, 3 - Math.sin(angle) * 4],
+            [3 + Math.sin(angle) * 4, 3 - Math.cos(angle) * 4],
+            [3 - Math.sin(angle) * 4, 3 + Math.cos(angle) * 4],
+        ];
+        bladePositions.forEach(b => {
+            const bx = Math.round(5 + b[0]), by = Math.round(5 + b[1]);
+            if (bx >= 0 && bx < 14 && by >= 0 && by < 14) {
+                fillRect(cx, bx, by, 3, 3, '#cc66bb');
+            }
+        });
+        // Eye
+        fillRect(cx, 7, 7, 2, 2, '#ffffff');
+        pixel(cx, 7, 7, '#440044');
+    }),
+
     // Boss - Dr. Entropy (32x32)
     entropy: (frame, phase) => getCachedSprite('boss_entropy_' + (Math.floor(frame/4) % 8) + '_' + phase, 32, 32, (cx) => {
         const f = Math.floor(frame/4) % 8;
@@ -1165,7 +1212,7 @@ const HUDSprites = {
     }),
 
     powerIcon: (type) => getCachedSprite('hud_power_' + type, 8, 8, (cx) => {
-        const colors = { dash: '#ff6644', shield: '#44aaff', float: '#aa44ff', star: '#ffff00' };
+        const colors = { dash: '#ff6644', shield: '#44aaff', float: '#aa44ff', star: '#ffff00', magnet: '#ffcc00', timeslow: '#44ffaa' };
         const c = colors[type] || '#ffffff';
         fillRect(cx, 1, 1, 6, 6, c);
         fillRect(cx, 2, 0, 4, 1, c);

@@ -271,6 +271,7 @@ const Game = {
         this.bossHP = 0;
         this.bossMaxHP = 0;
         this.bossPhase = 0;
+        this.timeSlowTimer = 0;
         this.currentPlane = 0;
         Particles.clear();
 
@@ -296,6 +297,12 @@ const Game = {
                             break;
                         case 'F':
                             this.levelEntities.push({ type: 'powerOrb', powerType: 'float', x: x*TILE, y: y*TILE, w: 16, h: 16, collected: false });
+                            break;
+                        case 'M':
+                            this.levelEntities.push({ type: 'powerOrb', powerType: 'magnet', x: x*TILE, y: y*TILE, w: 16, h: 16, collected: false });
+                            break;
+                        case 'Z':
+                            this.levelEntities.push({ type: 'powerOrb', powerType: 'timeslow', x: x*TILE, y: y*TILE, w: 16, h: 16, collected: false });
                             break;
                         case 'V':
                             tile = 40; // vine
@@ -408,9 +415,9 @@ const Game = {
             airJumps: 0,
             animFrame: 0, animTimer: 0,
             state: 'idle', hurtTimer: 0, dead: false,
-            dashTimer: 0, shieldTimer: 0, floatTimer: 0,
+            dashTimer: 0, shieldTimer: 0, floatTimer: 0, magnetTimer: 0,
             dropHoldTimer: 0, droppingThrough: false,
-            shootTimer: 0 // cooldown for photon blaster
+            shootTimer: 0
         };
         this.checkpointX = -1; this.checkpointY = -1;
         this.invincibleTimer = 90;
@@ -468,8 +475,10 @@ const Game = {
         if (this.invincibleTimer > 0) this.invincibleTimer--;
         if (this.starTimer > 0) { this.starTimer--; if (this.starTimer <= 0) this.starPower = false; }
         if (this.powerCooldown > 0) this.powerCooldown--;
+        if (this.timeSlowTimer > 0) this.timeSlowTimer--;
         if (p.shieldTimer > 0) p.shieldTimer--;
-        if (p.floatTimer > 0 && p.grounded) p.floatTimer = 0; // cancel float on landing
+        if (p.magnetTimer > 0) p.magnetTimer--;
+        if (p.floatTimer > 0 && p.grounded) p.floatTimer = 0;
 
         // Dead player floats away
         if (p.dead) {
@@ -640,6 +649,10 @@ const Game = {
                     this.powerCooldown = 300; Audio8.sfxPowerup();
                 } else if (this.power === 'float') {
                     p.floatTimer = 180; this.powerCooldown = 180; Audio8.sfxPowerup();
+                } else if (this.power === 'magnet') {
+                    p.magnetTimer = 300; this.powerCooldown = 300; Audio8.sfxPowerup();
+                } else if (this.power === 'timeslow') {
+                    this.timeSlowTimer = 240; this.powerCooldown = 360; Audio8.sfxPowerup();
                 }
             } else {
                 // Shoot photon blaster!
@@ -778,6 +791,16 @@ const Game = {
 
             // Coins
             if (e.type === 'coin' && !e.collected) {
+                // Magnet pull: attract coins toward player
+                if (p.magnetTimer > 0) {
+                    const dx = p.x - e.x, dy = p.y - e.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 80) {
+                        e.x += (dx / dist) * 2;
+                        e.y += (dy / dist) * 2;
+                        if (this.frame % 6 === 0) Particles.emit(e.x + 8, e.y + 8, 1, ['#ffcc0044'], 0.5, 8, 1);
+                    }
+                }
                 if (rectOverlap(pRect, e)) {
                     e.collected = true; this.coins++; this.score += 10;
                     Audio8.sfxCoin();
@@ -898,9 +921,10 @@ const Game = {
             if (e.type === 'enemy' && e.alive) {
                 e.frame++;
 
-                // Movement
+                // Movement (affected by timeslow)
+                const tsMult = this.timeSlowTimer > 0 ? 0.3 : 1;
                 const oldX = e.x;
-                e.x += e.vx * e.dir;
+                e.x += e.vx * e.dir * tsMult;
 
                 // Wall collision for enemies
                 const eLeft = Math.floor(e.x / TILE);
@@ -944,8 +968,31 @@ const Game = {
                             break;
                         }
                     }
+                } else if (e.enemyType === 'orbiter') {
+                    // Orbiter: circles around its start point
+                    const orbitRadius = (e.patrolDist || 48);
+                    const orbitSpeed = 0.025;
+                    const angle = this.frame * orbitSpeed + e.startX * 0.1;
+                    e.x = e.startX + Math.cos(angle) * orbitRadius;
+                    e.y = (e._startY || e.y) + Math.sin(angle) * orbitRadius;
+                    if (!e._startY) e._startY = e.y;
+                } else if (e.enemyType === 'spinner') {
+                    // Spinner: stays in place, shoots in 4 directions periodically
+                    e._shootTimer = (e._shootTimer || 0) + 1;
+                    if (e._shootTimer >= 120) {
+                        e._shootTimer = 0;
+                        const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                        dirs.forEach(d => {
+                            this.levelEntities.push({
+                                type: 'projectile', x: e.x + 4, y: e.y + 4,
+                                w: 6, h: 6, vx: d[0] * 1.5, vy: d[1] * 1.5,
+                                life: 90, color: '#cc66bb'
+                            });
+                        });
+                        Audio8.playNote(300, 0.06, 'square', Audio8.sfxGain, 0.1);
+                    }
                 } else {
-                    // Flying enemies bob gently
+                    // Other flying enemies bob gently
                     e.y += Math.sin(this.frame * 0.03 + e.startX) * 0.3;
                 }
 
@@ -1032,9 +1079,10 @@ const Game = {
                 }
             }
 
-            // Enemy projectiles (boss fireballs)
+            // Enemy projectiles (boss fireballs) — affected by timeslow
             if (e.type === 'projectile') {
-                e.x += e.vx; e.y += e.vy; e.life--;
+                const tsm = this.timeSlowTimer > 0 ? 0.3 : 1;
+                e.x += e.vx * tsm; e.y += e.vy * tsm; e.life--;
                 if (e.life <= 0) { this.levelEntities.splice(i, 1); continue; }
                 if (p.hurtTimer <= 0 && this.invincibleTimer <= 0 && p.shieldTimer <= 0 && rectOverlap(pRect, e)) {
                     this.playerHurt(e); this.levelEntities.splice(i, 1); continue;
@@ -1535,6 +1583,24 @@ const Game = {
             }
         }
 
+        // Time slow effect
+        if (this.timeSlowTimer > 0) {
+            ctx.globalAlpha = 0.1;
+            ctx.fillStyle = '#44ffaa';
+            ctx.fillRect(0, 0, GAME_W, GAME_H);
+            ctx.globalAlpha = 1;
+            if (this.timeSlowTimer < 60 && this.frame % 8 < 4) {
+                // Flashing when about to expire
+            } else {
+                drawText(ctx, 'TIME SLOW', GAME_W - 4, 46, '#44ffaa', 1, 'right');
+            }
+        }
+
+        // Magnet active indicator
+        if (this.player && this.player.magnetTimer > 0) {
+            drawText(ctx, 'MAGNET', GAME_W - 4, 56, '#ffcc00', 1, 'right');
+        }
+
         // Combo
         if (this.comboCount > 1 && this.comboTimer > 0) {
             ctx.globalAlpha = this.comboTimer / 60;
@@ -1640,6 +1706,8 @@ const Game = {
             case 'iceBat': sprite = EnemySprites.iceBat(e.frame, e.dir); break;
             case 'drone': sprite = EnemySprites.drone(e.frame); break;
             case 'chaosOrb': sprite = EnemySprites.chaosOrb(e.frame); break;
+            case 'orbiter': sprite = EnemySprites.orbiter(e.frame, e.dir); break;
+            case 'spinner': sprite = EnemySprites.spinner(e.frame); break;
             default: ctx.fillStyle = '#ff0000'; ctx.fillRect(ex, ey, e.w, e.h); return;
         }
         if (sprite) ctx.drawImage(sprite, ex, ey);
