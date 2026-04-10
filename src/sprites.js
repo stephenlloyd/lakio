@@ -979,6 +979,75 @@ const EnemySprites = {
 };
 
 // ============================================================
+// BOSS PUZZLE - Prisms & Pedestals
+// ============================================================
+const BossSprites = {
+    // Colored prism collectible (floats, glows)
+    prismItem: (frame, color) => getCachedSprite('boss_prism_' + color + '_' + (Math.floor(frame/4) % 8), 16, 16, (cx) => {
+        const f = Math.floor(frame/4) % 8;
+        const bob = Math.sin(frame * 0.08) * 2;
+        const y = 2 + bob;
+        const colors = { red: ['#ff4444','#ff8888','#cc2222'], green: ['#44ff44','#88ff88','#22cc22'], blue: ['#4488ff','#88bbff','#2244cc'] };
+        const c = colors[color] || colors.red;
+        // Triangle prism shape
+        fillRect(cx, 6, y + 1, 4, 8, c[0]);
+        fillRect(cx, 5, y + 3, 6, 4, c[0]);
+        fillRect(cx, 7, y, 2, 1, c[0]);
+        fillRect(cx, 7, y + 9, 2, 1, c[0]);
+        // Inner glow
+        fillRect(cx, 7, y + 2, 2, 5, c[1]);
+        // Highlight
+        pixel(cx, 6, y + 2, '#ffffff');
+        pixel(cx, 7, y + 1, '#ffffff');
+        // Orbiting sparkle
+        const angle = frame * 0.12;
+        const sx = 8 + Math.cos(angle) * 6;
+        const sy = y + 5 + Math.sin(angle) * 4;
+        if (sx >= 0 && sx < 16 && sy >= 0 && sy < 16) pixel(cx, Math.round(sx), Math.round(sy), c[1]);
+    }),
+
+    // Pedestal (empty or holding a prism)
+    pedestal: (frame, color) => getCachedSprite('boss_pedestal_' + (color || 'empty') + '_' + (Math.floor(frame/8) % 4), 16, 16, (cx) => {
+        // Stone base
+        fillRect(cx, 2, 10, 12, 6, '#888899');
+        fillRect(cx, 3, 9, 10, 1, '#9999aa');
+        fillRect(cx, 4, 8, 8, 1, '#aaaabb');
+        // Slot
+        fillRect(cx, 6, 8, 4, 2, '#333344');
+        if (color) {
+            const colors = { red: '#ff4444', green: '#44ff44', blue: '#4488ff' };
+            const c = colors[color] || '#ffffff';
+            // Prism sitting in pedestal
+            fillRect(cx, 6, 4, 4, 5, c);
+            fillRect(cx, 7, 3, 2, 1, c);
+            // Glow
+            const f = Math.floor(frame/8) % 4;
+            if (f < 2) {
+                pixel(cx, 5, 5, c);
+                pixel(cx, 10, 5, c);
+            }
+            pixel(cx, 7, 4, '#ffffff');
+        }
+    }),
+
+    // White light beam (when all 3 prisms placed)
+    lightBeam: (frame) => getCachedSprite('boss_beam_' + (Math.floor(frame/2) % 8), 256, 16, (cx) => {
+        const f = Math.floor(frame/2) % 8;
+        // Rainbow beam across screen
+        const colors = ['#ff4444', '#ff8844', '#ffff44', '#44ff44', '#44ffff', '#4444ff', '#ff44ff'];
+        for (let x = 0; x < 256; x += 2) {
+            const ci = (x + f * 4) % colors.length;
+            fillRect(cx, x, 4, 2, 8, colors[ci]);
+            fillRect(cx, x, 3, 2, 1, colors[Math.floor(ci + 1) % colors.length] + '88');
+            fillRect(cx, x, 12, 2, 1, colors[Math.floor(ci + 2) % colors.length] + '88');
+        }
+        // Core white center
+        fillRect(cx, 0, 6, 256, 4, '#ffffff88');
+        fillRect(cx, 0, 7, 256, 2, '#ffffffcc');
+    }),
+};
+
+// ============================================================
 // HUD
 // ============================================================
 const HUDSprites = {

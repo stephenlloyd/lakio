@@ -267,6 +267,9 @@ const Game = {
         this.gatesOpen = [];
         this.levelCompleting = false;
         this._levelClearTransitioning = false;
+        this.bossHP = 0;
+        this.bossMaxHP = 0;
+        this.bossPhase = 0;
         this.currentPlane = 0;
         Particles.clear();
 
@@ -372,6 +375,25 @@ const Game = {
                 dir: -1, alive: true, frame: 0,
                 attackTimer: 150, pattern: 0, hurtTimer: 0
             });
+
+            // Prism puzzle setup
+            if (level.bossPuzzle && level.bossPuzzle.type === 'prism') {
+                this.bossPuzzle = {
+                    active: true,
+                    round: 1,
+                    roundsToWin: level.bossPuzzle.roundsToWin || 3,
+                    carrying: null, // which prism color the player is carrying
+                    beamTimer: 0,   // countdown for the light beam attack
+                    beamActive: false,
+                    pedestalsDef: level.bossPuzzle.pedestals.map(p => ({ ...p })),
+                    prismsDef: level.bossPuzzle.prisms.map(p => ({ ...p })),
+                };
+                this.spawnPrismRound();
+            } else {
+                this.bossPuzzle = null;
+            }
+        } else {
+            this.bossPuzzle = null;
         }
 
         // Player
@@ -396,6 +418,37 @@ const Game = {
 
         Camera.reset(px - GAME_W / 2, py - GAME_H / 2);
         Audio8.playMusic(level.isBoss ? 'boss' : world.musicTrack);
+    },
+
+    // Spawn prisms and pedestals for the current boss round
+    spawnPrismRound() {
+        const bp = this.bossPuzzle;
+        if (!bp) return;
+        // Remove old prisms/pedestals
+        this.levelEntities = this.levelEntities.filter(e => e.type !== 'prism' && e.type !== 'pedestal');
+        bp.carrying = null;
+        bp.beamActive = false;
+        bp.beamTimer = 0;
+
+        // Spawn prisms at slightly randomized positions each round
+        const offset = (bp.round - 1) * 2;
+        bp.prismsDef.forEach(pd => {
+            this.levelEntities.push({
+                type: 'prism', color: pd.color,
+                x: (pd.x + ((bp.round * 3) % 5) - 2) * TILE,
+                y: (pd.y - Math.floor(bp.round / 2)) * TILE,
+                w: 16, h: 16, collected: false
+            });
+        });
+
+        // Spawn pedestals
+        bp.pedestalsDef.forEach(pd => {
+            this.levelEntities.push({
+                type: 'pedestal',
+                x: pd.x * TILE, y: pd.y * TILE,
+                w: 16, h: 16, color: null, filled: false
+            });
+        });
     },
 
     updatePlaying() {
@@ -889,23 +942,34 @@ const Game = {
                 e.y = 8 * TILE + Math.sin(this.frame * 0.02) * 25;
 
                 if (p.hurtTimer <= 0 && rectOverlap(pRect, e)) {
-                    if (p.vy > 0 && p.y + p.h - e.y < 14 && e.hurtTimer <= 0) {
-                        this.bossHP--;
-                        e.hurtTimer = 40; p.vy = JUMP_FORCE * 0.6;
-                        this.score += 500;
-                        Audio8.sfxEnemyDie();
-                        this.shakeTimer = 8; this.shakeIntensity = 2;
-                        Particles.emit(e.x + 14, e.y + 14, 12, ['#ff3300', '#ff6600', '#ffcc00'], 4, 25);
-                        if (this.bossHP <= this.bossMaxHP * 0.5 && this.bossPhase < 2) { this.bossPhase = 2; e.vx *= 1.3; }
-                        if (this.bossHP <= 0) {
-                            e.alive = false; this.score += 5000;
-                            Audio8.sfxLevelClear();
-                            this.shakeTimer = 20; this.shakeIntensity = 3;
-                            Particles.emit(e.x + 14, e.y + 14, 30, ['#ff3300', '#ff6600', '#ffcc00', '#ffffff'], 6, 50);
-                            setTimeout(() => { if (!this.levelCompleting) this.completeLevel(); }, 2500);
+                    if (this.bossPuzzle && this.bossPuzzle.active) {
+                        // Prism puzzle boss: can't stomp — just bounce off head, otherwise hurt
+                        if (p.vy > 0 && p.y + p.h - e.y < 14) {
+                            p.vy = JUMP_FORCE * 0.5; // bounce off
+                            Audio8.playNote(200, 0.08, 'square', Audio8.sfxGain, 0.1);
+                        } else if (this.invincibleTimer <= 0 && e.hurtTimer <= 0) {
+                            this.playerHurt(e);
                         }
-                    } else if (this.invincibleTimer <= 0 && e.hurtTimer <= 0) {
-                        this.playerHurt(e);
+                    } else {
+                        // Standard boss: stomp to damage
+                        if (p.vy > 0 && p.y + p.h - e.y < 14 && e.hurtTimer <= 0) {
+                            this.bossHP--;
+                            e.hurtTimer = 40; p.vy = JUMP_FORCE * 0.6;
+                            this.score += 500;
+                            Audio8.sfxEnemyDie();
+                            this.shakeTimer = 8; this.shakeIntensity = 2;
+                            Particles.emit(e.x + 14, e.y + 14, 12, ['#ff3300', '#ff6600', '#ffcc00'], 4, 25);
+                            if (this.bossHP <= this.bossMaxHP * 0.5 && this.bossPhase < 2) { this.bossPhase = 2; e.vx *= 1.3; }
+                            if (this.bossHP <= 0) {
+                                e.alive = false; this.score += 5000;
+                                Audio8.sfxLevelClear();
+                                this.shakeTimer = 20; this.shakeIntensity = 3;
+                                Particles.emit(e.x + 14, e.y + 14, 30, ['#ff3300', '#ff6600', '#ffcc00', '#ffffff'], 6, 50);
+                                setTimeout(() => { if (!this.levelCompleting) this.completeLevel(); }, 2500);
+                            }
+                        } else if (this.invincibleTimer <= 0 && e.hurtTimer <= 0) {
+                            this.playerHurt(e);
+                        }
                     }
                 }
             }
@@ -921,6 +985,102 @@ const Game = {
                 if (this.isSolid(tx, ty)) {
                     Particles.emit(e.x, e.y, 4, [e.color || '#ff3300'], 1.5, 10, 1);
                     this.levelEntities.splice(i, 1);
+                }
+            }
+        }
+
+        // ---- Prism Puzzle Logic ----
+        const bp = this.bossPuzzle;
+        if (bp && bp.active) {
+            // Collect prisms
+            for (const e of this.levelEntities) {
+                if (e.type === 'prism' && !e.collected && !bp.carrying) {
+                    if (rectOverlap(pRect, e)) {
+                        e.collected = true;
+                        bp.carrying = e.color;
+                        Audio8.sfxCoin();
+                        Particles.emit(e.x + 8, e.y + 8, 8, [
+                            e.color === 'red' ? '#ff4444' : e.color === 'green' ? '#44ff44' : '#4488ff',
+                            '#ffffff'
+                        ], 3, 20);
+                    }
+                }
+            }
+
+            // Place prism on pedestal
+            if (bp.carrying) {
+                for (const e of this.levelEntities) {
+                    if (e.type === 'pedestal' && !e.filled && rectOverlap(pRect, e)) {
+                        if (Input.actionJust || Input.down) {
+                            e.filled = true;
+                            e.color = bp.carrying;
+                            bp.carrying = null;
+                            Audio8.sfxSolve();
+                            Particles.emit(e.x + 8, e.y + 4, 10, [
+                                e.color === 'red' ? '#ff4444' : e.color === 'green' ? '#44ff44' : '#4488ff',
+                                '#ffffff', '#ffff88'
+                            ], 3, 25);
+
+                            // Check if all pedestals filled
+                            const allFilled = this.levelEntities.filter(pe => pe.type === 'pedestal').every(pe => pe.filled);
+                            if (allFilled) {
+                                // FIRE THE BEAM!
+                                bp.beamTimer = 120;
+                                bp.beamActive = true;
+                                Audio8.sfxLevelClear();
+                                this.shakeTimer = 30;
+                                this.shakeIntensity = 3;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Beam damages boss
+            if (bp.beamActive) {
+                bp.beamTimer--;
+                // Big particle show
+                if (this.frame % 2 === 0) {
+                    Particles.emit(randInt(20 * TILE, 54 * TILE), randInt(16 * TILE, 20 * TILE),
+                        3, ['#ff4444', '#44ff44', '#4488ff', '#ffffff', '#ffff44'], 4, 20);
+                }
+                // Damage boss continuously
+                if (bp.beamTimer % 20 === 0) {
+                    const boss = this.levelEntities.find(e => e.type === 'boss' && e.alive);
+                    if (boss) {
+                        this.bossHP -= 1;
+                        boss.hurtTimer = 15;
+                        this.shakeTimer = 5;
+                        this.shakeIntensity = 2;
+                        Particles.emit(boss.x + 14, boss.y + 14, 8,
+                            ['#ff3300', '#ffcc00', '#ffffff'], 4, 20);
+                    }
+                }
+
+                if (bp.beamTimer <= 0) {
+                    bp.beamActive = false;
+                    // Check if boss is dead
+                    if (this.bossHP <= 0) {
+                        const boss = this.levelEntities.find(e => e.type === 'boss');
+                        if (boss) {
+                            boss.alive = false;
+                            this.score += 5000;
+                            Audio8.sfxLevelClear();
+                            this.shakeTimer = 25;
+                            this.shakeIntensity = 4;
+                            Particles.emit(boss.x + 14, boss.y + 14, 40,
+                                ['#ff3300', '#ff6600', '#ffcc00', '#ffffff'], 7, 60);
+                            setTimeout(() => { if (!this.levelCompleting) this.completeLevel(); }, 2500);
+                        }
+                    } else {
+                        // Next round!
+                        bp.round++;
+                        this.bossPhase = Math.min(3, bp.round);
+                        // Speed up boss
+                        const boss = this.levelEntities.find(e => e.type === 'boss' && e.alive);
+                        if (boss) boss.vx = Math.min(2, boss.vx + 0.3);
+                        this.spawnPrismRound();
+                    }
                 }
             }
         }
@@ -1158,6 +1318,8 @@ const Game = {
             else if (e.type === 'spring') ctx.drawImage(TileSprites.spring(e.activated > 0 ? 1 : 0), ex, ey);
             else if (e.type === 'checkpoint') ctx.drawImage(TileSprites.checkpoint(this.frame, e.activated), ex, ey);
             else if (e.type === 'portal') ctx.drawImage(TileSprites.portal(this.frame, e.color), ex, ey);
+            else if (e.type === 'prism' && !e.collected) ctx.drawImage(BossSprites.prismItem(this.frame, e.color), ex, ey);
+            else if (e.type === 'pedestal') ctx.drawImage(BossSprites.pedestal(this.frame, e.color), ex, ey);
             else if (e.type === 'switch') {
                 ctx.fillStyle = e.active ? '#00ff00' : '#ff4400';
                 ctx.fillRect(ex + 3, ey + 4, 10, 8);
@@ -1250,10 +1412,43 @@ const Game = {
             drawText(ctx, 'DR. ENTROPY', GAME_W / 2, 14, '#ff4444', 1, 'center');
         }
 
+        // Prism puzzle HUD
+        if (this.bossPuzzle && this.bossPuzzle.active && this.bossHP > 0) {
+            const bp = this.bossPuzzle;
+            // Show which prism you're carrying
+            if (bp.carrying) {
+                const colors = { red: '#ff4444', green: '#44ff44', blue: '#4488ff' };
+                drawText(ctx, 'CARRYING: ' + bp.carrying.toUpperCase() + ' PRISM', GAME_W / 2, 36, colors[bp.carrying], 1, 'center');
+                drawText(ctx, 'BRING TO A PEDESTAL!', GAME_W / 2, 46, '#aaaaaa', 1, 'center');
+            } else if (!bp.beamActive) {
+                // Show which prisms still need collecting
+                const uncollected = this.levelEntities.filter(e => e.type === 'prism' && !e.collected);
+                const unfilled = this.levelEntities.filter(e => e.type === 'pedestal' && !e.filled);
+                if (uncollected.length > 0) {
+                    drawText(ctx, 'COLLECT PRISMS: ' + uncollected.map(e => e.color[0].toUpperCase()).join(' '),
+                        GAME_W / 2, 36, '#ffcc00', 1, 'center');
+                } else if (unfilled.length > 0) {
+                    drawText(ctx, 'ALL PRISMS ON PEDESTALS!', GAME_W / 2, 36, '#ffcc00', 1, 'center');
+                }
+            }
+            // Round indicator
+            drawText(ctx, 'ROUND ' + bp.round + '/' + bp.roundsToWin, GAME_W - 4, 36, '#888888', 1, 'right');
+
+            // Light beam effect
+            if (bp.beamActive) {
+                ctx.globalAlpha = 0.6 + Math.sin(this.frame * 0.3) * 0.2;
+                // Draw rainbow beam across the arena
+                const beamY = 17 * TILE - Camera.y;
+                ctx.drawImage(BossSprites.lightBeam(this.frame), 0, beamY - 4);
+                ctx.globalAlpha = 1;
+                drawText(ctx, 'WHITE LIGHT!', GAME_W / 2, 54, '#ffffff', 2, 'center');
+            }
+        }
+
         // Combo
         if (this.comboCount > 1 && this.comboTimer > 0) {
             ctx.globalAlpha = this.comboTimer / 60;
-            drawText(ctx, this.comboCount + 'x COMBO!', GAME_W / 2, 50, '#ffcc00', 2, 'center');
+            drawText(ctx, this.comboCount + 'x COMBO!', GAME_W / 2, 58, '#ffcc00', 2, 'center');
             ctx.globalAlpha = 1;
         }
     },

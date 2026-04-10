@@ -254,37 +254,57 @@ const WorldData = [
                     const m = [];
                     for (let y = 0; y < H; y++) m[y] = row(W, '0');
                     for (let y = 27; y < H; y++) for (let x = 0; x < W; x++) m[y] = placeInRow(m[y], x, '1');
-                    // Approach area
-                    m[26] = placeInRow(m[26], 0, '111111111111');
-                    m[24] = placeInRow(m[24], 4, '222');
-                    m[22] = placeInRow(m[22], 7, '040');
-                    m[21] = placeInRow(m[21], 6, '22222');
-                    m[26] = placeInRow(m[26], 12, '111111');
+                    // Approach - get shield power
+                    m[26] = placeInRow(m[26], 0, '11111111111111111111');
+                    m[24] = placeInRow(m[24], 4, '2222');
+                    m[22] = placeInRow(m[22], 8, '040');
                     m[24] = placeInRow(m[24], 14, '0S0');
                     m[23] = placeInRow(m[23], 13, '11111');
-                    m[25] = placeInRow(m[25], 16, '7');
-                    // Boss arena
-                    m[26] = placeInRow(m[26], 20, '1111111111111111111111111111111111111111');
-                    // Platforms in arena
-                    m[22] = placeInRow(m[22], 24, '2222');
-                    m[22] = placeInRow(m[22], 36, '2222');
-                    m[18] = placeInRow(m[18], 30, '222222');
-                    m[24] = placeInRow(m[24], 28, '222');
-                    m[24] = placeInRow(m[24], 38, '222');
-                    // Walls
-                    for (let y = 14; y < 27; y++) {
+                    m[25] = placeInRow(m[25], 18, '7');
+                    // Boss arena - enclosed box
+                    m[26] = placeInRow(m[26], 20, '11111111111111111111111111111111111');
+                    for (let y = 15; y < 27; y++) {
                         m[y] = placeInRow(m[y], 20, '1');
-                        m[y] = placeInRow(m[y], 55, '1');
+                        m[y] = placeInRow(m[y], 54, '1');
                     }
-                    m[14] = placeInRow(m[14], 20, '111111111111111111111111111111111111');
-                    // Exit (appears after boss)
-                    m[25] = placeInRow(m[25], 54, '5');
+                    m[15] = placeInRow(m[15], 20, '11111111111111111111111111111111111');
+                    // Arena platforms - easy to reach (max 3 tiles between)
+                    // Ground level platforms
+                    m[24] = placeInRow(m[24], 23, '2222');
+                    m[24] = placeInRow(m[24], 33, '222222');
+                    m[24] = placeInRow(m[24], 45, '2222');
+                    // Mid level - reachable with single jump from ground plats
+                    m[22] = placeInRow(m[22], 26, '222');
+                    m[22] = placeInRow(m[22], 35, '2222');
+                    m[22] = placeInRow(m[22], 43, '222');
+                    // Upper level - reachable with double jump from mid
+                    m[20] = placeInRow(m[20], 29, '222');
+                    m[20] = placeInRow(m[20], 38, '222');
+                    // Top platforms near boss
+                    m[18] = placeInRow(m[18], 32, '222222');
+                    // Exit (after boss defeated)
+                    m[25] = placeInRow(m[25], 53, '5');
                     return m;
                 })(),
                 isBoss: true,
                 bossType: 'entropy',
+                // Prism puzzle data
+                bossPuzzle: {
+                    type: 'prism',
+                    prisms: [
+                        { color: 'red', x: 24, y: 23 },
+                        { color: 'green', x: 42, y: 21 },
+                        { color: 'blue', x: 30, y: 19 },
+                    ],
+                    pedestals: [
+                        { x: 34, y: 25, color: null },
+                        { x: 37, y: 25, color: null },
+                        { x: 40, y: 25, color: null },
+                    ],
+                    roundsToWin: 3,
+                },
                 enemies: [],
-                hint: 'Defeat the guardian!\nJump on its head!',
+                hint: 'Collect the 3 PRISMS (R,G,B) and\nplace them on the pedestals!\nWhite light defeats the boss!',
             }
         ]
     },
