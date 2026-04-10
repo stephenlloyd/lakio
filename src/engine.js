@@ -52,7 +52,7 @@ const Input = {
     // Virtual buttons for unified input
     left: false, right: false, up: false, down: false,
     jump: false, action: false, run: false, pause: false,
-    jumpJust: false, actionJust: false, pauseJust: false,
+    jumpJust: false, actionJust: false, pauseJust: false, hintJust: false,
 
     init() {
         window.addEventListener('keydown', e => {
@@ -147,6 +147,7 @@ const Input = {
         this.jumpJust = this.justPressed['Space'] || this.justPressed['KeyZ'];
         this.actionJust = this.justPressed['KeyX'] || this.justPressed['ShiftLeft'] || this.justPressed['Enter'];
         this.pauseJust = this.justPressed['Escape'] || this.justPressed['KeyP'];
+        this.hintJust = this.justPressed['KeyH'];
 
         // Touch mapping - virtual dpad from drag
         if (this.touchStart && this.touchCurrent) {

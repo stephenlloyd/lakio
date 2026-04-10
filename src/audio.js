@@ -1,5 +1,5 @@
 // ============================================================
-// AXIOM - 8-Bit Audio Engine (Web Audio API)
+// AXIOM - 8-Bit Audio Engine (Lo-fi Chill Edition)
 // ============================================================
 
 const Audio8 = {
@@ -19,26 +19,17 @@ const Audio8 = {
             this.masterGain = this.ctx.createGain();
             this.masterGain.gain.value = 0.4;
             this.masterGain.connect(this.ctx.destination);
-
             this.musicGain = this.ctx.createGain();
-            this.musicGain.gain.value = 0.3;
+            this.musicGain.gain.value = 0.25;
             this.musicGain.connect(this.masterGain);
-
             this.sfxGain = this.ctx.createGain();
             this.sfxGain.gain.value = 0.5;
             this.sfxGain.connect(this.masterGain);
-        } catch (e) {
-            this.enabled = false;
-        }
+        } catch (e) { this.enabled = false; }
     },
 
-    resume() {
-        if (this.ctx && this.ctx.state === 'suspended') {
-            this.ctx.resume();
-        }
-    },
+    resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
 
-    // Play a note with chiptune waveform
     playNote(freq, duration, type, gainNode, volume, detune) {
         if (!this.enabled || !this.ctx) return;
         const osc = this.ctx.createOscillator();
@@ -55,15 +46,12 @@ const Audio8 = {
         osc.stop(this.ctx.currentTime + duration);
     },
 
-    // Noise for percussion
     playNoise(duration, volume) {
         if (!this.enabled || !this.ctx) return;
         const bufferSize = this.ctx.sampleRate * duration;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
         const gain = this.ctx.createGain();
@@ -76,88 +64,42 @@ const Audio8 = {
 
     // ---- Sound Effects ----
     sfxJump() {
-        this.playNote(250, 0.1, 'square', this.sfxGain, 0.2);
-        setTimeout(() => this.playNote(400, 0.1, 'square', this.sfxGain, 0.15), 50);
+        this.playNote(250, 0.1, 'square', this.sfxGain, 0.15);
+        setTimeout(() => this.playNote(400, 0.1, 'square', this.sfxGain, 0.1), 50);
     },
-
-    sfxLand() {
-        this.playNoise(0.05, 0.1);
-    },
-
+    sfxLand() { this.playNoise(0.04, 0.08); },
     sfxCoin() {
-        this.playNote(988, 0.08, 'square', this.sfxGain, 0.2);
-        setTimeout(() => this.playNote(1319, 0.15, 'square', this.sfxGain, 0.2), 80);
+        this.playNote(988, 0.08, 'square', this.sfxGain, 0.15);
+        setTimeout(() => this.playNote(1319, 0.12, 'square', this.sfxGain, 0.15), 80);
     },
-
     sfxPowerup() {
-        const notes = [523, 659, 784, 1047];
-        notes.forEach((n, i) => {
-            setTimeout(() => this.playNote(n, 0.15, 'square', this.sfxGain, 0.2), i * 80);
-        });
+        [523, 659, 784, 1047].forEach((n, i) => setTimeout(() => this.playNote(n, 0.15, 'triangle', this.sfxGain, 0.15), i * 100));
     },
-
     sfxHurt() {
-        this.playNote(200, 0.15, 'sawtooth', this.sfxGain, 0.3);
-        setTimeout(() => this.playNote(120, 0.2, 'sawtooth', this.sfxGain, 0.3), 100);
+        this.playNote(200, 0.12, 'sawtooth', this.sfxGain, 0.2);
+        setTimeout(() => this.playNote(120, 0.15, 'sawtooth', this.sfxGain, 0.2), 80);
     },
-
     sfxDie() {
-        const notes = [400, 350, 300, 250, 200, 150];
-        notes.forEach((n, i) => {
-            setTimeout(() => this.playNote(n, 0.15, 'sawtooth', this.sfxGain, 0.25), i * 100);
-        });
+        [400, 350, 300, 250, 200, 150].forEach((n, i) => setTimeout(() => this.playNote(n, 0.12, 'sawtooth', this.sfxGain, 0.18), i * 100));
     },
-
     sfxEnemyDie() {
-        this.playNote(600, 0.05, 'square', this.sfxGain, 0.2);
-        setTimeout(() => this.playNote(300, 0.15, 'square', this.sfxGain, 0.15), 50);
-        this.playNoise(0.1, 0.1);
+        this.playNote(600, 0.04, 'square', this.sfxGain, 0.15);
+        setTimeout(() => this.playNote(300, 0.1, 'square', this.sfxGain, 0.1), 40);
     },
-
-    sfxSelect() {
-        this.playNote(660, 0.08, 'square', this.sfxGain, 0.15);
-    },
-
+    sfxSelect() { this.playNote(660, 0.06, 'triangle', this.sfxGain, 0.12); },
     sfxConfirm() {
-        this.playNote(523, 0.08, 'square', this.sfxGain, 0.2);
-        setTimeout(() => this.playNote(784, 0.12, 'square', this.sfxGain, 0.2), 80);
+        this.playNote(523, 0.06, 'triangle', this.sfxGain, 0.15);
+        setTimeout(() => this.playNote(784, 0.1, 'triangle', this.sfxGain, 0.15), 60);
     },
+    sfxDoor() { for (let i = 0; i < 5; i++) setTimeout(() => this.playNote(200 + i * 80, 0.1, 'triangle', this.sfxGain, 0.12), i * 60); },
+    sfxSolve() { [523, 587, 659, 784, 1047].forEach((n, i) => setTimeout(() => this.playNote(n, 0.18, 'triangle', this.sfxGain, 0.15), i * 120)); },
+    sfxLevelClear() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((n, i) => setTimeout(() => this.playNote(n, 0.2, 'triangle', this.sfxGain, 0.18), i * 160)); },
+    sfx1up() { [660, 880, 660, 880, 1100].forEach((n, i) => setTimeout(() => this.playNote(n, 0.1, 'triangle', this.sfxGain, 0.15), i * 80)); },
 
-    sfxDoor() {
-        for (let i = 0; i < 5; i++) {
-            setTimeout(() => this.playNote(200 + i * 80, 0.1, 'triangle', this.sfxGain, 0.15), i * 60);
-        }
-    },
-
-    sfxSolve() {
-        const melody = [523, 587, 659, 784, 1047];
-        melody.forEach((n, i) => {
-            setTimeout(() => this.playNote(n, 0.2, 'square', this.sfxGain, 0.2), i * 120);
-        });
-    },
-
-    sfxLevelClear() {
-        const melody = [523, 659, 784, 1047, 784, 1047, 1319];
-        melody.forEach((n, i) => {
-            setTimeout(() => this.playNote(n, 0.2, 'square', this.sfxGain, 0.25), i * 150);
-        });
-    },
-
-    sfx1up() {
-        const notes = [660, 880, 660, 880, 1100, 880, 1100];
-        notes.forEach((n, i) => {
-            setTimeout(() => this.playNote(n, 0.1, 'square', this.sfxGain, 0.2), i * 70);
-        });
-    },
-
-    // ---- Music System ----
+    // ---- Music ----
     stopMusic() {
-        this.musicPlaying = false;
-        this.currentTrack = null;
-        if (this.musicSequencer) {
-            clearInterval(this.musicSequencer);
-            this.musicSequencer = null;
-        }
+        this.musicPlaying = false; this.currentTrack = null;
+        if (this.musicSequencer) { clearInterval(this.musicSequencer); this.musicSequencer = null; }
     },
 
     playMusic(trackName) {
@@ -166,364 +108,313 @@ const Audio8 = {
         this.stopMusic();
         this.currentTrack = trackName;
         this.musicPlaying = true;
-
         const track = MusicTracks[trackName];
         if (!track) return;
-
         let step = 0;
-        const bpm = track.bpm || 140;
-        const stepTime = (60 / bpm / 4) * 1000; // 16th notes
-
+        const bpm = track.bpm || 80;
+        const stepTime = (60 / bpm / 4) * 1000;
         this.musicSequencer = setInterval(() => {
             if (!this.musicPlaying) return;
-
-            // Play each channel
             track.channels.forEach(ch => {
                 const noteIdx = step % ch.pattern.length;
                 const note = ch.pattern[noteIdx];
-                if (note > 0) {
-                    const freq = noteToFreq(note);
-                    this.playNote(freq, ch.noteLen || 0.1, ch.wave || 'square', this.musicGain, ch.vol || 0.15);
-                }
+                if (note > 0) this.playNote(noteToFreq(note), ch.noteLen || 0.2, ch.wave || 'triangle', this.musicGain, ch.vol || 0.1);
             });
-
             step++;
             if (step >= (track.length || 64)) step = track.loopPoint || 0;
         }, stepTime);
     }
 };
 
-// Note number to frequency (MIDI-ish)
-function noteToFreq(n) {
-    return 440 * Math.pow(2, (n - 69) / 12);
-}
+function noteToFreq(n) { return 440 * Math.pow(2, (n - 69) / 12); }
 
-// Shorthand note names to MIDI numbers
 const N = {
     C3:48,D3:50,E3:52,F3:53,G3:55,A3:57,B3:59,
     C4:60,D4:62,E4:64,F4:65,G4:67,A4:69,B4:71,
-    C5:72,D5:74,E5:76,F5:77,G5:79,A5:81,B5:83,
-    C6:84,
-    _:0 // rest
+    C5:72,D5:74,E5:76,F5:77,G5:79,A5:81,B5:83,C6:84,
+    _:0
 };
 
-// ---- Music Tracks ----
+// ============================================================
+// LO-FI CHILL MUSIC TRACKS (75-85 BPM, relaxed, atmospheric)
+// ============================================================
 const MusicTracks = {
+    // Title - dreamy, inviting
     title: {
-        bpm: 130,
-        length: 64,
-        loopPoint: 0,
+        bpm: 78, length: 64, loopPoint: 0,
         channels: [
-            { // Melody
-                wave: 'square', vol: 0.12, noteLen: 0.12,
-                pattern: [
-                    N.E4,N._,N.G4,N._,N.A4,N._,N.B4,N._,
-                    N.C5,N._,N.B4,N._,N.A4,N._,N.G4,N._,
-                    N.E4,N._,N.G4,N._,N.A4,N._,N.E5,N._,
-                    N.D5,N._,N.C5,N._,N.B4,N._,N.A4,N._,
-                    N.C5,N._,N.E5,N._,N.D5,N._,N.C5,N._,
-                    N.B4,N._,N.A4,N._,N.G4,N._,N.E4,N._,
-                    N.A4,N._,N.B4,N._,N.C5,N._,N.D5,N._,
-                    N.E5,N._,N._,N._,N.E5,N._,N._,N._,
-                ]
-            },
-            { // Bass
-                wave: 'triangle', vol: 0.18, noteLen: 0.15,
-                pattern: [
-                    N.A3,N._,N._,N.A3,N._,N._,N.A3,N._,
-                    N.E3,N._,N._,N.E3,N._,N._,N.E3,N._,
-                    N.A3,N._,N._,N.A3,N._,N._,N.A3,N._,
-                    N.G3,N._,N._,N.G3,N._,N._,N.G3,N._,
-                    N.F3,N._,N._,N.F3,N._,N._,N.F3,N._,
-                    N.E3,N._,N._,N.E3,N._,N._,N.E3,N._,
-                    N.F3,N._,N._,N.F3,N._,N.G3,N._,N._,
-                    N.A3,N._,N._,N._,N.A3,N._,N._,N._,
-                ]
-            },
-            { // Arpeggio
-                wave: 'square', vol: 0.06, noteLen: 0.05,
-                pattern: [
-                    N.A4,N.C5,N.E5,N.A4,N.C5,N.E5,N.A4,N.C5,
-                    N.E4,N.G4,N.B4,N.E4,N.G4,N.B4,N.E4,N.G4,
-                    N.A4,N.C5,N.E5,N.A4,N.C5,N.E5,N.A4,N.C5,
-                    N.G4,N.B4,N.D5,N.G4,N.B4,N.D5,N.G4,N.B4,
-                    N.F4,N.A4,N.C5,N.F4,N.A4,N.C5,N.F4,N.A4,
-                    N.E4,N.G4,N.B4,N.E4,N.G4,N.B4,N.E4,N.G4,
-                    N.F4,N.A4,N.C5,N.F4,N.A4,N.G4,N.B4,N.D5,
-                    N.A4,N.C5,N.E5,N._,N.A4,N.C5,N.E5,N._,
-                ]
-            }
+            { wave: 'triangle', vol: 0.10, noteLen: 0.28,
+              pattern: [
+                N.E4,N._,N._,N._,N.G4,N._,N._,N._,
+                N.A4,N._,N._,N._,N.G4,N._,N._,N._,
+                N.E4,N._,N._,N.D4,N._,N._,N.C4,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.C4,N._,N._,N._,N.E4,N._,N._,N._,
+                N.G4,N._,N._,N._,N.A4,N._,N._,N._,
+                N.G4,N._,N._,N.E4,N._,N._,N.D4,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.12, noteLen: 0.35,
+              pattern: [
+                N.A3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.C3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.F3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.G3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'sine', vol: 0.06, noteLen: 0.4,
+              pattern: [
+                N.E5,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.C5,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.A4,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.G4,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     },
 
+    // World 1 - Prism Peaks: gentle, curious, exploring
     world1: {
-        bpm: 150,
-        length: 64,
-        loopPoint: 0,
+        bpm: 82, length: 64, loopPoint: 0,
         channels: [
-            { // Melody - bright, adventurous
-                wave: 'square', vol: 0.11, noteLen: 0.1,
-                pattern: [
-                    N.C5,N._,N.E5,N._,N.G5,N._,N.E5,N._,
-                    N.F5,N._,N.D5,N._,N.E5,N._,N.C5,N._,
-                    N.D5,N._,N.F5,N._,N.A5,N._,N.G5,N._,
-                    N.E5,N._,N.D5,N._,N.C5,N._,N._,N._,
-                    N.C5,N._,N.E5,N._,N.G5,N._,N.C6,N._,
-                    N.B5,N._,N.A5,N._,N.G5,N._,N.F5,N._,
-                    N.E5,N._,N.G5,N._,N.F5,N._,N.D5,N._,
-                    N.C5,N._,N._,N._,N.C5,N._,N._,N._,
-                ]
-            },
-            { // Bass
-                wave: 'triangle', vol: 0.18, noteLen: 0.14,
-                pattern: [
-                    N.C3,N._,N._,N.C3,N._,N._,N.C3,N._,
-                    N.F3,N._,N._,N.F3,N._,N._,N.F3,N._,
-                    N.G3,N._,N._,N.G3,N._,N._,N.G3,N._,
-                    N.C3,N._,N._,N.C3,N._,N._,N.C3,N._,
-                    N.C3,N._,N._,N.C3,N._,N._,N.E3,N._,
-                    N.F3,N._,N._,N.F3,N._,N._,N.D3,N._,
-                    N.E3,N._,N._,N.G3,N._,N._,N.G3,N._,
-                    N.C3,N._,N._,N._,N.C3,N._,N._,N._,
-                ]
-            }
+            { wave: 'triangle', vol: 0.09, noteLen: 0.25,
+              pattern: [
+                N.C4,N._,N._,N._,N.E4,N._,N._,N._,
+                N.G4,N._,N._,N.E4,N._,N._,N._,N._,
+                N.A4,N._,N._,N._,N.G4,N._,N._,N._,
+                N.E4,N._,N._,N._,N._,N._,N._,N._,
+                N.D4,N._,N._,N._,N.F4,N._,N._,N._,
+                N.A4,N._,N._,N.G4,N._,N._,N._,N._,
+                N.E4,N._,N._,N._,N.D4,N._,N._,N._,
+                N.C4,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.11, noteLen: 0.35,
+              pattern: [
+                N.C3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.G3,N._,N._,N._,
+                N.F3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.C3,N._,N._,N._,
+                N.D3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.A3,N._,N._,N._,
+                N.G3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.C3,N._,N._,N._,
+              ]},
+            { wave: 'sine', vol: 0.05, noteLen: 0.3,
+              pattern: [
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.E5,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.C5,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.A4,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     },
 
+    // World 2 - Gravity Gorge: spacey, ambient, floating
     world2: {
-        bpm: 120,
-        length: 64,
-        loopPoint: 0,
+        bpm: 72, length: 64, loopPoint: 0,
         channels: [
-            { // Melody - mysterious, spacey
-                wave: 'triangle', vol: 0.14, noteLen: 0.18,
-                pattern: [
-                    N.E4,N._,N._,N.G4,N._,N._,N.B4,N._,
-                    N._,N.A4,N._,N._,N.G4,N._,N._,N._,
-                    N.D4,N._,N._,N.F4,N._,N._,N.A4,N._,
-                    N._,N.G4,N._,N._,N.E4,N._,N._,N._,
-                    N.E4,N._,N._,N.G4,N._,N._,N.C5,N._,
-                    N._,N.B4,N._,N._,N.A4,N._,N._,N._,
-                    N.G4,N._,N._,N.B4,N._,N._,N.A4,N._,
-                    N._,N._,N.E4,N._,N._,N._,N._,N._,
-                ]
-            },
-            { // Bass
-                wave: 'triangle', vol: 0.16, noteLen: 0.2,
-                pattern: [
-                    N.E3,N._,N._,N._,N._,N._,N.E3,N._,
-                    N._,N._,N._,N._,N.E3,N._,N._,N._,
-                    N.D3,N._,N._,N._,N._,N._,N.D3,N._,
-                    N._,N._,N._,N._,N.D3,N._,N._,N._,
-                    N.E3,N._,N._,N._,N._,N._,N.C3,N._,
-                    N._,N._,N._,N._,N.C3,N._,N._,N._,
-                    N.G3,N._,N._,N._,N._,N._,N.A3,N._,
-                    N._,N._,N.E3,N._,N._,N._,N._,N._,
-                ]
-            }
+            { wave: 'sine', vol: 0.10, noteLen: 0.4,
+              pattern: [
+                N.E4,N._,N._,N._,N._,N._,N._,N._,
+                N.G4,N._,N._,N._,N._,N._,N._,N._,
+                N.B4,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.A4,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.G4,N._,N._,N._,N._,N._,N._,N._,
+                N.E4,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.08, noteLen: 0.5,
+              pattern: [
+                N.E3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.D3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     },
 
+    // World 3 - Volt Valley: minimal, electronic, pulsing
     world3: {
-        bpm: 160,
-        length: 64,
-        loopPoint: 0,
+        bpm: 80, length: 64, loopPoint: 0,
         channels: [
-            { // Melody - electric, energetic
-                wave: 'sawtooth', vol: 0.08, noteLen: 0.08,
-                pattern: [
-                    N.A4,N.A4,N._,N.C5,N._,N.E5,N._,N.A4,
-                    N._,N.B4,N._,N.D5,N._,N.E5,N._,N._,
-                    N.A4,N.A4,N._,N.C5,N._,N.E5,N._,N.G5,
-                    N._,N.E5,N._,N.D5,N._,N.C5,N._,N._,
-                    N.F4,N.F4,N._,N.A4,N._,N.C5,N._,N.F4,
-                    N._,N.G4,N._,N.B4,N._,N.D5,N._,N._,
-                    N.E4,N._,N.G4,N._,N.B4,N._,N.E5,N._,
-                    N.D5,N._,N.C5,N._,N.B4,N._,N.A4,N._,
-                ]
-            },
-            { // Bass - driving
-                wave: 'square', vol: 0.12, noteLen: 0.06,
-                pattern: [
-                    N.A3,N._,N.A3,N._,N.A3,N._,N.A3,N._,
-                    N.G3,N._,N.G3,N._,N.G3,N._,N.G3,N._,
-                    N.A3,N._,N.A3,N._,N.A3,N._,N.A3,N._,
-                    N.E3,N._,N.E3,N._,N.E3,N._,N.E3,N._,
-                    N.F3,N._,N.F3,N._,N.F3,N._,N.F3,N._,
-                    N.G3,N._,N.G3,N._,N.G3,N._,N.G3,N._,
-                    N.E3,N._,N.E3,N._,N.E3,N._,N.E3,N._,
-                    N.A3,N._,N._,N._,N.A3,N._,N._,N._,
-                ]
-            }
+            { wave: 'square', vol: 0.06, noteLen: 0.2,
+              pattern: [
+                N.A4,N._,N._,N._,N._,N._,N.C5,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.E4,N._,N._,N._,N._,N._,N.A4,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.G4,N._,N._,N._,N._,N._,N.B4,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.A4,N._,N._,N._,N._,N._,N.E4,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.10, noteLen: 0.3,
+              pattern: [
+                N.A3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.A3,N._,N._,N._,
+                N.E3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.E3,N._,N._,N._,
+                N.G3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.G3,N._,N._,N._,
+                N.A3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     },
 
+    // World 4 - Cryo Caverns: cold, crystalline, ethereal
     world4: {
-        bpm: 110,
-        length: 64,
-        loopPoint: 0,
+        bpm: 70, length: 64, loopPoint: 0,
         channels: [
-            { // Melody - cold, crystalline
-                wave: 'sine', vol: 0.18, noteLen: 0.22,
-                pattern: [
-                    N.E5,N._,N._,N._,N.D5,N._,N._,N._,
-                    N.C5,N._,N._,N._,N.B4,N._,N._,N._,
-                    N.A4,N._,N._,N._,N.G4,N._,N._,N._,
-                    N.A4,N._,N._,N._,N.B4,N._,N._,N._,
-                    N.C5,N._,N._,N._,N.E5,N._,N._,N._,
-                    N.D5,N._,N._,N._,N.C5,N._,N._,N._,
-                    N.B4,N._,N._,N._,N.A4,N._,N._,N._,
-                    N.E4,N._,N._,N._,N._,N._,N._,N._,
-                ]
-            },
-            { // Pad
-                wave: 'triangle', vol: 0.1, noteLen: 0.3,
-                pattern: [
-                    N.A3,N._,N._,N._,N._,N._,N._,N._,
-                    N._,N._,N._,N._,N._,N._,N._,N._,
-                    N.F3,N._,N._,N._,N._,N._,N._,N._,
-                    N._,N._,N._,N._,N._,N._,N._,N._,
-                    N.C3,N._,N._,N._,N._,N._,N._,N._,
-                    N._,N._,N._,N._,N._,N._,N._,N._,
-                    N.E3,N._,N._,N._,N._,N._,N._,N._,
-                    N._,N._,N._,N._,N._,N._,N._,N._,
-                ]
-            }
+            { wave: 'sine', vol: 0.12, noteLen: 0.45,
+              pattern: [
+                N.E5,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.D5,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.C5,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.B4,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.A4,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.08, noteLen: 0.5,
+              pattern: [
+                N.A3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.F3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.E3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     },
 
+    // World 5 - Entropy's Fortress: dark, ominous, but still chill
     world5: {
-        bpm: 170,
-        length: 64,
-        loopPoint: 0,
+        bpm: 78, length: 64, loopPoint: 0,
         channels: [
-            { // Melody - intense, chaotic
-                wave: 'sawtooth', vol: 0.09, noteLen: 0.08,
-                pattern: [
-                    N.A4,N._,N.C5,N._,N.E5,N._,N.A5,N._,
-                    N.G5,N._,N.E5,N._,N.C5,N._,N.A4,N._,
-                    N.B4,N._,N.D5,N._,N.F5,N._,N.B5,N._,
-                    N.A5,N._,N.F5,N._,N.D5,N._,N.B4,N._,
-                    N.C5,N._,N.E5,N._,N.G5,N._,N.C6,N._,
-                    N.B5,N._,N.G5,N._,N.E5,N._,N.C5,N._,
-                    N.A4,N._,N.E5,N._,N.A4,N._,N.C5,N._,
-                    N.E5,N._,N.A5,N._,N.E5,N._,N._,N._,
-                ]
-            },
-            { // Bass - ominous
-                wave: 'square', vol: 0.14, noteLen: 0.08,
-                pattern: [
-                    N.A3,N.A3,N._,N._,N.A3,N._,N._,N.A3,
-                    N._,N._,N.A3,N._,N._,N.A3,N.A3,N._,
-                    N.B3,N.B3,N._,N._,N.B3,N._,N._,N.B3,
-                    N._,N._,N.B3,N._,N._,N.B3,N.B3,N._,
-                    N.C3,N.C3,N._,N._,N.C3,N._,N._,N.C3,
-                    N._,N._,N.C3,N._,N._,N.C3,N.C3,N._,
-                    N.A3,N._,N.E3,N._,N.A3,N._,N.E3,N._,
-                    N.A3,N._,N._,N._,N.A3,N._,N._,N._,
-                ]
-            }
+            { wave: 'sawtooth', vol: 0.05, noteLen: 0.25,
+              pattern: [
+                N.A4,N._,N._,N._,N._,N._,N._,N._,
+                N.C5,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.E4,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.B4,N._,N._,N._,N._,N._,N._,N._,
+                N.A4,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.G4,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.10, noteLen: 0.4,
+              pattern: [
+                N.A3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.E3,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.B3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N.A3,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     },
 
+    // Boss - tense but measured, not frantic
     boss: {
-        bpm: 180,
-        length: 32,
-        loopPoint: 0,
+        bpm: 85, length: 32, loopPoint: 0,
         channels: [
-            {
-                wave: 'sawtooth', vol: 0.1, noteLen: 0.06,
-                pattern: [
-                    N.E4,N.E4,N._,N.E4,N._,N.G4,N._,N.E4,
-                    N._,N.B4,N._,N._,N.A4,N._,N.G4,N._,
-                    N.F4,N.F4,N._,N.F4,N._,N.A4,N._,N.F4,
-                    N._,N.C5,N._,N._,N.B4,N._,N.A4,N._,
-                ]
-            },
-            {
-                wave: 'square', vol: 0.14, noteLen: 0.06,
-                pattern: [
-                    N.E3,N._,N.E3,N._,N.E3,N._,N.E3,N._,
-                    N.E3,N._,N.E3,N._,N.G3,N._,N.A3,N._,
-                    N.F3,N._,N.F3,N._,N.F3,N._,N.F3,N._,
-                    N.F3,N._,N.F3,N._,N.A3,N._,N.B3,N._,
-                ]
-            }
+            { wave: 'sawtooth', vol: 0.07, noteLen: 0.18,
+              pattern: [
+                N.E4,N._,N._,N.E4,N._,N._,N._,N._,
+                N.G4,N._,N._,N._,N.E4,N._,N._,N._,
+                N.A4,N._,N._,N.A4,N._,N._,N._,N._,
+                N.G4,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.12, noteLen: 0.25,
+              pattern: [
+                N.E3,N._,N._,N._,N.E3,N._,N._,N._,
+                N._,N._,N.G3,N._,N._,N._,N.A3,N._,
+                N.A3,N._,N._,N._,N.A3,N._,N._,N._,
+                N._,N._,N.G3,N._,N._,N._,N.E3,N._,
+              ]}
         ]
     },
 
+    // Victory - gentle triumph
     victory: {
-        bpm: 140,
-        length: 32,
-        loopPoint: 16,
+        bpm: 80, length: 32, loopPoint: 16,
         channels: [
-            {
-                wave: 'square', vol: 0.12, noteLen: 0.15,
-                pattern: [
-                    N.C5,N._,N.E5,N._,N.G5,N._,N.C6,N._,
-                    N.G5,N._,N.C6,N._,N.E5,N._,N.G5,N._,
-                    N.C5,N._,N.E5,N._,N.G5,N._,N.C6,N._,
-                    N._,N._,N._,N._,N._,N._,N._,N._,
-                ]
-            },
-            {
-                wave: 'triangle', vol: 0.15, noteLen: 0.2,
-                pattern: [
-                    N.C3,N._,N._,N._,N.G3,N._,N._,N._,
-                    N.E3,N._,N._,N._,N.C3,N._,N._,N._,
-                    N.C3,N._,N._,N._,N.G3,N._,N._,N._,
-                    N._,N._,N._,N._,N._,N._,N._,N._,
-                ]
-            }
+            { wave: 'triangle', vol: 0.10, noteLen: 0.3,
+              pattern: [
+                N.C4,N._,N._,N._,N.E4,N._,N._,N._,
+                N.G4,N._,N._,N._,N.C5,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.10, noteLen: 0.4,
+              pattern: [
+                N.C3,N._,N._,N._,N._,N._,N._,N._,
+                N.G3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     },
 
+    // Game over - slow, melancholy
     gameover: {
-        bpm: 80,
-        length: 16,
-        loopPoint: 16, // doesn't loop
+        bpm: 60, length: 16, loopPoint: 16,
         channels: [
-            {
-                wave: 'triangle', vol: 0.15, noteLen: 0.25,
-                pattern: [
-                    N.E4,N._,N._,N.D4,N._,N._,N.C4,N._,
-                    N._,N._,N.B3,N._,N._,N._,N._,N._,
-                ]
-            }
+            { wave: 'triangle', vol: 0.12, noteLen: 0.4,
+              pattern: [
+                N.E4,N._,N._,N._,N.D4,N._,N._,N._,
+                N.C4,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     },
 
+    // World map - peaceful, inviting
     worldmap: {
-        bpm: 120,
-        length: 64,
-        loopPoint: 0,
+        bpm: 75, length: 64, loopPoint: 0,
         channels: [
-            {
-                wave: 'triangle', vol: 0.1, noteLen: 0.15,
-                pattern: [
-                    N.C4,N._,N.E4,N._,N.G4,N._,N.E4,N._,
-                    N.F4,N._,N.A4,N._,N.G4,N._,N.E4,N._,
-                    N.D4,N._,N.F4,N._,N.A4,N._,N.F4,N._,
-                    N.G4,N._,N.B4,N._,N.A4,N._,N.G4,N._,
-                    N.C4,N._,N.E4,N._,N.G4,N._,N.C5,N._,
-                    N.B4,N._,N.G4,N._,N.E4,N._,N.C4,N._,
-                    N.D4,N._,N.G4,N._,N.F4,N._,N.E4,N._,
-                    N.C4,N._,N._,N._,N.C4,N._,N._,N._,
-                ]
-            },
-            {
-                wave: 'triangle', vol: 0.12, noteLen: 0.18,
-                pattern: [
-                    N.C3,N._,N._,N._,N.C3,N._,N._,N._,
-                    N.F3,N._,N._,N._,N.C3,N._,N._,N._,
-                    N.D3,N._,N._,N._,N.D3,N._,N._,N._,
-                    N.G3,N._,N._,N._,N.G3,N._,N._,N._,
-                    N.C3,N._,N._,N._,N.E3,N._,N._,N._,
-                    N.G3,N._,N._,N._,N.C3,N._,N._,N._,
-                    N.D3,N._,N._,N._,N.G3,N._,N._,N._,
-                    N.C3,N._,N._,N._,N.C3,N._,N._,N._,
-                ]
-            }
+            { wave: 'triangle', vol: 0.08, noteLen: 0.3,
+              pattern: [
+                N.C4,N._,N._,N._,N.E4,N._,N._,N._,
+                N.G4,N._,N._,N._,N._,N._,N._,N._,
+                N.E4,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.F4,N._,N._,N._,N.A4,N._,N._,N._,
+                N.G4,N._,N._,N._,N._,N._,N._,N._,
+                N.E4,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]},
+            { wave: 'triangle', vol: 0.10, noteLen: 0.4,
+              pattern: [
+                N.C3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.G3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.F3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+                N.C3,N._,N._,N._,N._,N._,N._,N._,
+                N._,N._,N._,N._,N._,N._,N._,N._,
+              ]}
         ]
     }
 };

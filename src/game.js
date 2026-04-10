@@ -13,6 +13,7 @@ const Game = {
     worldsUnlocked: 1,
     levelsCompleted: [],
     keys: 0,
+    inventory: [], // persists between levels: [{id, name, icon, description}]
     // Powers: dash, shield, float
     power: null,
     powerTimer: 0,
@@ -61,7 +62,7 @@ const Game = {
         this.currentWorld = 0; this.currentLevel = 0;
         this.worldsUnlocked = 1;
         this.levelsCompleted = WorldData.map(w => w.levels.map(() => false));
-        this.keys = 0; this.power = null;
+        this.keys = 0; this.power = null; this.inventory = [];
         this.checkpointX = -1; this.checkpointY = -1;
         this.levelCompleting = false;
     },
@@ -465,6 +466,34 @@ const Game = {
         if (!p) return;
 
         if (Input.pauseJust) { this.state = 'paused'; this.menuSelection = 0; Audio8.sfxSelect(); return; }
+
+        // H key = contextual hint
+        if (Input.hintJust) {
+            const level = WorldData[this.currentWorld].levels[this.currentLevel];
+            let hint = '';
+            // Check proximity to puzzle entities for specific hints
+            const px = p.x, py = p.y;
+            for (const e of this.levelEntities) {
+                const dist = Math.abs(e.x - px) + Math.abs(e.y - py);
+                if (dist < 80) {
+                    if (e.type === 'switch' && !e.active) { hint = 'Step on this SWITCH to activate\na circuit. Find all switches!'; break; }
+                    if (e.type === 'portal') { hint = 'PORTAL: step in to teleport.\nLinked portals share a color pair.'; break; }
+                    if (e.type === 'pedestal' && !e.filled) { hint = 'Place a PRISM here.\nCollect R, G, B prisms first!'; break; }
+                    if (e.type === 'prism' && !e.collected) { hint = 'A colored PRISM! Collect it and\nbring to a pedestal.'; break; }
+                    if (e.type === 'powerOrb' && !e.collected) { hint = 'POWER ORB: collect for a special\nability. UP+X to activate it.'; break; }
+                }
+            }
+            if (!hint) {
+                // General level hint
+                hint = level.hint || 'Explore! Shoot with X.\nJump twice. Wall-slide into walls.';
+            }
+            if (this.inventory.length > 0) {
+                hint += '\nINVENTORY: ' + this.inventory.map(i => i.name).join(', ');
+            }
+            this.hintText = hint;
+            this.hintTimer = 360;
+            Audio8.sfxSelect();
+        }
 
         const world = WorldData[this.currentWorld];
         const level = world.levels[this.currentLevel];
