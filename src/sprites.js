@@ -372,6 +372,80 @@ const LuxSprites = {
         sparkles.forEach((s, i) => {
             if ((f + i) % 3 === 0) pixel(cx, s[0], s[1] + hover, '#ffff88');
         });
+    }),
+
+    // Shooting pose
+    shootR: (frame) => getCachedSprite('lux_shootR_' + (frame % 4), 16, 16, (cx) => {
+        const f = frame % 4;
+        // Same body as idle but arm extended forward
+        fillRect(cx, 4, 14, 3, 2, PAL.luxBoots);
+        fillRect(cx, 9, 14, 3, 2, PAL.luxBoots);
+        fillRect(cx, 5, 12, 2, 2, PAL.luxPants);
+        fillRect(cx, 9, 12, 2, 2, PAL.luxPants);
+        fillRect(cx, 4, 8, 8, 4, PAL.luxCoat);
+        fillRect(cx, 5, 8, 6, 4, PAL.luxCoatLight);
+        fillRect(cx, 4, 7, 8, 2, PAL.luxScarf);
+        // Back arm
+        fillRect(cx, 3, 9, 1, 3, PAL.luxCoat);
+        // Extended arm with blaster
+        fillRect(cx, 12, 8, 3, 2, PAL.luxCoat);
+        fillRect(cx, 14, 7, 2, 3, '#888899'); // blaster
+        pixel(cx, 15, 8, f < 2 ? '#00ffff' : '#88eeff'); // muzzle glow
+        // Head
+        fillRect(cx, 3, 1, 10, 7, PAL.luxSkin);
+        fillRect(cx, 4, 0, 8, 1, PAL.luxSkin);
+        fillRect(cx, 3, 0, 10, 3, PAL.luxHair);
+        fillRect(cx, 2, 1, 1, 3, PAL.luxHair);
+        fillRect(cx, 13, 1, 1, 3, PAL.luxHair);
+        fillRect(cx, 4, 2, 3, 1, '#888888');
+        fillRect(cx, 9, 2, 3, 1, '#888888');
+        fillRect(cx, 5, 2, 1, 1, PAL.luxGoggles);
+        fillRect(cx, 10, 2, 1, 1, PAL.luxGoggles);
+        // Determined eyes
+        fillRect(cx, 4, 4, 3, 3, PAL.luxEyeWhite);
+        fillRect(cx, 9, 4, 3, 3, PAL.luxEyeWhite);
+        fillRect(cx, 5, 4, 2, 3, PAL.luxEyeIris);
+        fillRect(cx, 10, 4, 2, 3, PAL.luxEyeIris);
+        pixel(cx, 5, 4, PAL.luxEyeShine);
+        pixel(cx, 10, 4, PAL.luxEyeShine);
+        pixel(cx, 3, 6, PAL.luxSkinBlush);
+        pixel(cx, 12, 6, PAL.luxSkinBlush);
+        pixel(cx, 7, 6, '#dd8877');
+        pixel(cx, 8, 6, '#dd8877');
+    }),
+
+    // Wall slide
+    wallSlide: (frame) => getCachedSprite('lux_wallSlide_' + (frame % 4), 16, 16, (cx) => {
+        const f = frame % 4;
+        // Pressed against wall, sliding down
+        fillRect(cx, 5, 14, 3, 2, PAL.luxBoots);
+        fillRect(cx, 9, 13, 3, 2, PAL.luxBoots);
+        fillRect(cx, 6, 12, 2, 2, PAL.luxPants);
+        fillRect(cx, 9, 11, 2, 2, PAL.luxPants);
+        fillRect(cx, 5, 8, 7, 4, PAL.luxCoat);
+        fillRect(cx, 6, 8, 5, 4, PAL.luxCoatLight);
+        fillRect(cx, 5, 7, 7, 2, PAL.luxScarf);
+        pixel(cx, 4, 8, PAL.luxScarf);
+        pixel(cx, 3, 9, PAL.luxScarf);
+        // Arms reaching toward wall
+        fillRect(cx, 12, 7, 2, 2, PAL.luxCoat);
+        fillRect(cx, 13, 6, 1, 2, PAL.luxSkin);
+        // Head
+        fillRect(cx, 4, 1, 9, 7, PAL.luxSkin);
+        fillRect(cx, 5, 0, 7, 1, PAL.luxSkin);
+        fillRect(cx, 4, 0, 9, 3, PAL.luxHair);
+        fillRect(cx, 3, 1, 1, 3, PAL.luxHair);
+        // Eyes looking at wall
+        fillRect(cx, 6, 4, 3, 2, PAL.luxEyeWhite);
+        fillRect(cx, 10, 4, 2, 2, PAL.luxEyeWhite);
+        fillRect(cx, 7, 4, 2, 2, PAL.luxEyeIris);
+        fillRect(cx, 10, 4, 2, 2, PAL.luxEyeIris);
+        pixel(cx, 7, 4, PAL.luxEyeShine);
+        // Slide particles
+        if (f % 2 === 0) {
+            pixel(cx, 13, 4, '#ffffff44');
+            pixel(cx, 14, 7, '#ffffff44');
+        }
     })
 };
 
@@ -700,6 +774,19 @@ const TileSprites = {
         // Bubbles
         if (f === 0) pixel(cx, 4, 8, '#88aaff');
         if (f === 2) pixel(cx, 11, 5, '#88aaff');
+    }),
+
+    // Photon blaster projectile
+    photon: (frame) => getCachedSprite('tile_photon_' + (Math.floor(frame/2) % 4), 8, 6, (cx) => {
+        const f = Math.floor(frame/2) % 4;
+        // Glowing cyan-white energy bolt
+        fillRect(cx, 1, 1, 6, 4, '#00ccff');
+        fillRect(cx, 2, 0, 4, 1, '#00ccff');
+        fillRect(cx, 2, 5, 4, 1, '#00ccff');
+        fillRect(cx, 3, 2, 3, 2, '#ffffff');
+        // Trailing glow
+        fillRect(cx, 0, 2, 2, 2, f < 2 ? '#0088cc' : '#00aadd');
+        pixel(cx, 6, 2, f < 2 ? '#88eeff' : '#ffffff');
     }),
 };
 

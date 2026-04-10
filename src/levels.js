@@ -138,7 +138,7 @@ const WorldData = [
                     { id: 'A', x: 31, y: 10, color: 'blue', target: 'B' },
                     { id: 'B', x: 60, y: 10, color: 'orange', target: 'A' },
                 ],
-                hint: 'Explore! Find coins, keys, and\nsecret paths. Swipe or use arrows.',
+                hint: 'X = PHOTON BLASTER to zap enemies!\nJUMP twice in the air. WALL SLIDE\nby pressing into walls. Explore!',
             },
             // Level 1-2
             {

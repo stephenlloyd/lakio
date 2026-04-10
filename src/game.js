@@ -117,7 +117,8 @@ const Game = {
         ctx.drawImage(luxSprite, GAME_W / 2 - 8, 105 + Math.sin(this.frame * 0.03) * 4);
         if (this.frame % 80 < 50) drawText(ctx, 'PRESS SPACE OR TAP', GAME_W / 2, 155, '#ffffff', 1, 'center');
         drawText(ctx, 'ARROWS/WASD  SPACE/Z JUMP', GAME_W / 2, 185, '#556677', 1, 'center');
-        drawText(ctx, 'X/SHIFT ACTION  ESC PAUSE', GAME_W / 2, 197, '#556677', 1, 'center');
+        drawText(ctx, 'X/SHIFT PHOTON BLASTER', GAME_W / 2, 197, '#556677', 1, 'center');
+        drawText(ctx, 'UP+X SPECIAL  ESC PAUSE', GAME_W / 2, 209, '#445566', 1, 'center');
         drawText(ctx, '2026 AXIOM LABS', GAME_W / 2, 226, '#334455', 1, 'center');
     },
 
@@ -402,14 +403,14 @@ const Game = {
         this.player = {
             x: px, y: py, w: 12, h: 15,
             vx: 0, vy: 0, dir: 1,
-            grounded: false, onVine: false,
+            grounded: false, onVine: false, wallSliding: false,
             coyoteTimer: 0, jumpBufferTimer: 0,
-            airJumps: 0, // double jump counter
+            airJumps: 0,
             animFrame: 0, animTimer: 0,
             state: 'idle', hurtTimer: 0, dead: false,
             dashTimer: 0, shieldTimer: 0, floatTimer: 0,
-            dropHoldTimer: 0, // hold-down-to-drop timer
-            droppingThrough: false // currently falling through a platform
+            dropHoldTimer: 0, droppingThrough: false,
+            shootTimer: 0 // cooldown for photon blaster
         };
         this.checkpointX = -1; this.checkpointY = -1;
         this.invincibleTimer = 90;
@@ -467,6 +468,8 @@ const Game = {
         if (this.invincibleTimer > 0) this.invincibleTimer--;
         if (this.starTimer > 0) { this.starTimer--; if (this.starTimer <= 0) this.starPower = false; }
         if (this.powerCooldown > 0) this.powerCooldown--;
+        if (p.shieldTimer > 0) p.shieldTimer--;
+        if (p.floatTimer > 0 && p.grounded) p.floatTimer = 0; // cancel float on landing
 
         // Dead player floats away
         if (p.dead) {
@@ -624,21 +627,37 @@ const Game = {
             else p.vy = Math.max(p.vy, -MAX_FALL);
         }
 
-        // Use power (action button)
-        if (Input.actionJust && this.power && this.powerCooldown <= 0) {
-            if (this.power === 'dash') {
-                p.dashTimer = 12;
-                this.powerCooldown = 90;
-                Audio8.sfxJump();
-            } else if (this.power === 'shield') {
-                p.shieldTimer = 180;
-                this.invincibleTimer = 180;
-                this.powerCooldown = 300;
-                Audio8.sfxPowerup();
-            } else if (this.power === 'float') {
-                p.floatTimer = 180;
-                this.powerCooldown = 180;
-                Audio8.sfxPowerup();
+        // ---- Photon Blaster (action button = shoot) ----
+        if (p.shootTimer > 0) p.shootTimer--;
+        if (Input.actionJust && p.shootTimer <= 0) {
+            // Special power takes priority if available and off cooldown
+            if (this.power && this.powerCooldown <= 0 && Input.up) {
+                // Hold UP + action = use special power
+                if (this.power === 'dash') {
+                    p.dashTimer = 12; this.powerCooldown = 90; Audio8.sfxJump();
+                } else if (this.power === 'shield') {
+                    p.shieldTimer = 180; this.invincibleTimer = 180;
+                    this.powerCooldown = 300; Audio8.sfxPowerup();
+                } else if (this.power === 'float') {
+                    p.floatTimer = 180; this.powerCooldown = 180; Audio8.sfxPowerup();
+                }
+            } else {
+                // Shoot photon blaster!
+                p.shootTimer = 18; // cooldown between shots
+                const shotSpeed = 3.5;
+                const shotX = p.dir > 0 ? p.x + p.w + 2 : p.x - 10;
+                this.levelEntities.push({
+                    type: 'photon',
+                    x: shotX, y: p.y + 5,
+                    w: 8, h: 6,
+                    vx: shotSpeed * p.dir, vy: 0,
+                    life: 60,
+                    fromPlayer: true
+                });
+                Audio8.playNote(800, 0.06, 'square', Audio8.sfxGain, 0.15);
+                setTimeout(() => Audio8.playNote(1200, 0.04, 'square', Audio8.sfxGain, 0.1), 30);
+                Particles.emit(shotX + 4, p.y + 8, 3, ['#00ccff', '#88eeff'], 1.5, 8, 1);
+                p.state = 'shoot';
             }
         }
 
@@ -651,13 +670,45 @@ const Game = {
             this.collideWithLevelV(p, grav);
         } else {
             p.y += p.vy;
-            // Vine bounds
-            const vTop = Math.floor(p.y / TILE);
             const vBot = Math.floor((p.y + p.h) / TILE);
             if (this.isSolid(pcx, vBot + 1) && p.vy > 0) { p.y = (vBot + 1) * TILE - p.h; p.vy = 0; }
         }
 
         p.x = clamp(p.x, 0, this.levelW - p.w);
+
+        // ---- Wall Slide & Wall Jump ----
+        p.wallSliding = false;
+        if (!p.grounded && !p.onVine && p.vy > 0) {
+            // Check if pressing into a wall
+            const wallCheckDir = Input.right ? 1 : (Input.left ? -1 : 0);
+            if (wallCheckDir !== 0) {
+                const wallCol = wallCheckDir > 0 ?
+                    Math.floor((p.x + p.w + 1) / TILE) :
+                    Math.floor((p.x - 1) / TILE);
+                const topRow = Math.floor(p.y / TILE);
+                const botRow = Math.floor((p.y + p.h - 1) / TILE);
+                let touchingWall = false;
+                for (let r = topRow; r <= botRow; r++) {
+                    if (this.isSolid(wallCol, r)) { touchingWall = true; break; }
+                }
+                if (touchingWall) {
+                    p.wallSliding = true;
+                    p.vy = Math.min(p.vy, 1.0); // slow slide down wall
+                    p.dir = -wallCheckDir; // face away from wall
+                    p.airJumps = Math.min(p.airJumps, 1); // restore 1 jump
+                    // Wall jump
+                    if (Input.jumpJust) {
+                        p.vy = JUMP_FORCE * 0.9;
+                        p.vx = -wallCheckDir * 2.5; // push away from wall
+                        p.wallSliding = false;
+                        p.airJumps = 1;
+                        Audio8.sfxJump();
+                        Particles.emit(p.x + (wallCheckDir > 0 ? p.w : 0), p.y + 8, 6,
+                            ['#ffffff44', '#cccccc44'], 2, 12, 1);
+                    }
+                }
+            }
+        }
 
         // Soft landing particles
         if (p.grounded && p._wasFalling) {
@@ -692,10 +743,12 @@ const Game = {
             Audio8.sfxDie(); this.shakeTimer = 10; this.shakeIntensity = 2;
         }
 
-        // Animation (softer transitions)
+        // Animation
         p.animTimer++;
         if (p.animTimer >= 6) { p.animTimer = 0; p.animFrame++; }
-        if (p.onVine) p.state = 'walk';
+        if (p.wallSliding) p.state = 'wallSlide';
+        else if (p.onVine) p.state = 'walk';
+        else if (p.shootTimer > 14) p.state = 'shoot'; // brief shoot pose
         else if (p.grounded && Math.abs(p.vx) > 0.3) p.state = 'walk';
         else if (p.grounded) p.state = 'idle';
         else if (p.vy < -0.5) p.state = 'jump';
@@ -704,6 +757,11 @@ const Game = {
 
         if (p.dashTimer > 0) p.state = 'dash';
         if (p.floatTimer > 0 && !p.grounded) p.state = 'float';
+
+        // Wall slide particles
+        if (p.wallSliding && this.frame % 4 === 0) {
+            Particles.emit(p.x + (p.dir < 0 ? 0 : p.w), p.y + 4, 1, ['#ffffff22'], 0.5, 8, 1);
+        }
 
         this.updateEntities();
         Particles.update();
@@ -974,17 +1032,44 @@ const Game = {
                 }
             }
 
-            // Projectiles
+            // Enemy projectiles (boss fireballs)
             if (e.type === 'projectile') {
                 e.x += e.vx; e.y += e.vy; e.life--;
                 if (e.life <= 0) { this.levelEntities.splice(i, 1); continue; }
-                if (p.hurtTimer <= 0 && this.invincibleTimer <= 0 && rectOverlap(pRect, e)) {
+                if (p.hurtTimer <= 0 && this.invincibleTimer <= 0 && p.shieldTimer <= 0 && rectOverlap(pRect, e)) {
                     this.playerHurt(e); this.levelEntities.splice(i, 1); continue;
                 }
                 const tx = Math.floor(e.x / TILE), ty = Math.floor(e.y / TILE);
                 if (this.isSolid(tx, ty)) {
                     Particles.emit(e.x, e.y, 4, [e.color || '#ff3300'], 1.5, 10, 1);
                     this.levelEntities.splice(i, 1);
+                }
+            }
+
+            // Player photon blasts
+            if (e.type === 'photon') {
+                e.x += e.vx; e.y += e.vy; e.life--;
+                if (e.life <= 0) { this.levelEntities.splice(i, 1); continue; }
+                // Hit wall
+                const ptx = Math.floor(e.x / TILE), pty = Math.floor(e.y / TILE);
+                if (this.isSolid(ptx, pty)) {
+                    Particles.emit(e.x + 4, e.y + 3, 5, ['#00ccff', '#88eeff', '#ffffff'], 2, 12, 1);
+                    Audio8.playNote(400, 0.04, 'square', Audio8.sfxGain, 0.08);
+                    this.levelEntities.splice(i, 1); continue;
+                }
+                // Hit enemy
+                for (let j = this.levelEntities.length - 1; j >= 0; j--) {
+                    const target = this.levelEntities[j];
+                    if (target.type === 'enemy' && target.alive && rectOverlap(e, target)) {
+                        target.alive = false;
+                        this.score += 150;
+                        this.comboCount++; this.comboTimer = 60;
+                        Audio8.sfxEnemyDie();
+                        Particles.emit(target.x + 7, target.y + 7, 10,
+                            ['#00ccff', '#ffffff', '#ffcc00'], 3, 20);
+                        this.levelEntities.splice(i, 1);
+                        break;
+                    }
                 }
             }
         }
@@ -1337,6 +1422,9 @@ const Game = {
                 ctx.fillStyle = '#ffcc00';
                 ctx.fillRect(ex + 2, ey + 2, e.w - 4, e.h - 4);
             }
+            else if (e.type === 'photon') {
+                ctx.drawImage(TileSprites.photon(this.frame), ex, ey);
+            }
         }
 
         // Player
@@ -1377,6 +1465,8 @@ const Game = {
                 let sprite;
                 const flip = p.dir < 0;
                 if (p.hurtTimer > 0) sprite = LuxSprites.hurt();
+                else if (p.state === 'wallSlide') sprite = LuxSprites.wallSlide(this.frame);
+                else if (p.state === 'shoot') sprite = LuxSprites.shootR(p.animFrame);
                 else if (p.state === 'dash') sprite = LuxSprites.dashR(p.animFrame);
                 else if (p.state === 'float') sprite = LuxSprites.floatR(this.frame);
                 else if (p.state === 'jump') sprite = LuxSprites.jumpR();
