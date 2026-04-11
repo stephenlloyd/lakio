@@ -483,8 +483,14 @@ const Game = {
                     if (e.type === 'powerOrb' && !e.collected) { hint = 'POWER ORB: collect for a special\nability. UP+X to activate it.'; break; }
                 }
             }
+            // Check hintZones from level data
+            if (!hint && level.hintZones) {
+                for (const hz of level.hintZones) {
+                    const dist = Math.sqrt(Math.pow(p.x - hz.x * TILE, 2) + Math.pow(p.y - hz.y * TILE, 2));
+                    if (dist < (hz.radius || 60)) { hint = hz.text; break; }
+                }
+            }
             if (!hint) {
-                // General level hint
                 hint = level.hint || 'Explore! Shoot with X.\nJump twice. Wall-slide into walls.';
             }
             if (this.inventory.length > 0) {
