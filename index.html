@@ -27,15 +27,113 @@
             background: #000; color: #0ff; font-family: monospace; font-size: 20px;
             z-index: 100;
         }
+        /* Mobile touch controls overlay */
+        #touch-controls {
+            display: none;
+            position: fixed;
+            bottom: 0; left: 0; width: 100%; height: 140px;
+            pointer-events: none;
+            z-index: 50;
+        }
+        .touch-btn {
+            position: absolute;
+            pointer-events: auto;
+            background: rgba(255,255,255,0.12);
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.5);
+            font-family: monospace;
+            font-size: 14px;
+            font-weight: bold;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .touch-btn:active, .touch-btn.pressed {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+        }
+        /* D-pad */
+        #btn-left   { left: 10px; bottom: 50px; width: 52px; height: 52px; }
+        #btn-right  { left: 74px; bottom: 50px; width: 52px; height: 52px; }
+        #btn-up     { left: 42px; bottom: 104px; width: 52px; height: 52px; }
+        #btn-down   { left: 42px; bottom: -4px; width: 52px; height: 52px; }
+        /* Action buttons */
+        #btn-jump   { right: 75px; bottom: 50px; width: 60px; height: 60px; background: rgba(0,200,255,0.15); border-color: rgba(0,200,255,0.3); }
+        #btn-shoot  { right: 10px; bottom: 50px; width: 60px; height: 60px; background: rgba(255,100,50,0.15); border-color: rgba(255,100,50,0.3); }
+        #btn-hint   { right: 10px; bottom: 115px; width: 36px; height: 36px; font-size: 11px; }
+
+        @media (hover: hover) and (pointer: fine) {
+            #touch-controls { display: none !important; }
+        }
     </style>
 </head>
 <body>
     <div id="loading">LOADING AXIOM...</div>
     <canvas id="game"></canvas>
+    <div id="touch-controls">
+        <div id="btn-left" class="touch-btn">&lt;</div>
+        <div id="btn-right" class="touch-btn">&gt;</div>
+        <div id="btn-up" class="touch-btn">^</div>
+        <div id="btn-down" class="touch-btn">v</div>
+        <div id="btn-jump" class="touch-btn">JUMP</div>
+        <div id="btn-shoot" class="touch-btn">FIRE</div>
+        <div id="btn-hint" class="touch-btn">H</div>
+    </div>
     <script src="src/engine.js"></script>
     <script src="src/audio.js"></script>
     <script src="src/sprites.js"></script>
     <script src="src/levels.js"></script>
     <script src="src/game.js"></script>
+    <script>
+    // Mobile detection & touch button handling
+    (function() {
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (isMobile) {
+            document.getElementById('touch-controls').style.display = 'block';
+        }
+
+        const btnState = {};
+        const btnMap = {
+            'btn-left': 'ArrowLeft',
+            'btn-right': 'ArrowRight',
+            'btn-up': 'ArrowUp',
+            'btn-down': 'ArrowDown',
+            'btn-jump': 'Space',
+            'btn-shoot': 'KeyX',
+            'btn-hint': 'KeyH',
+        };
+
+        Object.keys(btnMap).forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            const keyCode = btnMap[id];
+
+            el.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                el.classList.add('pressed');
+                if (!Input.keys[keyCode]) Input.justPressed[keyCode] = true;
+                Input.keys[keyCode] = true;
+                btnState[id] = true;
+                Audio8.resume();
+            }, { passive: false });
+
+            el.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                el.classList.remove('pressed');
+                Input.keys[keyCode] = false;
+                btnState[id] = false;
+            }, { passive: false });
+
+            el.addEventListener('touchcancel', (e) => {
+                el.classList.remove('pressed');
+                Input.keys[keyCode] = false;
+                btnState[id] = false;
+            });
+        });
+    })();
+    </script>
 </body>
 </html>

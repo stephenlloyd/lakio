@@ -1347,19 +1347,89 @@ const Game = {
     },
 
     drawLevelClear() {
-        this.drawPlaying();
-        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, GAME_W, GAME_H);
-        const level = WorldData[this.currentWorld].levels[this.currentLevel];
-        drawText(ctx, 'LEVEL CLEAR!', GAME_W / 2, 60, '#ffcc00', 3, 'center');
-        drawText(ctx, level.name, GAME_W / 2, 100, '#ffffff', 1, 'center');
-        drawText(ctx, 'SCORE: ' + this.score, GAME_W / 2, 125, '#00ffff', 2, 'center');
-        drawText(ctx, 'COINS: ' + this.coins, GAME_W / 2, 155, '#ffcc00', 1, 'center');
-        // Show prompt once skippable
-        if (this._levelClearTimer < 140 && this.frame % 50 < 30) {
-            drawText(ctx, 'PRESS SPACE TO CONTINUE', GAME_W / 2, 185, '#888888', 1, 'center');
+        const t = 200 - this._levelClearTimer; // time elapsed since clear
+        const world = WorldData[this.currentWorld];
+        const level = world.levels[this.currentLevel];
+
+        // Phase 1 (0-40): zoom into player with bright flash
+        if (t < 40) {
+            this.drawPlaying();
+            ctx.globalAlpha = t / 40 * 0.7;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, GAME_W, GAME_H);
+            ctx.globalAlpha = 1;
+            return;
         }
-        if (this.frame % 12 === 0) {
-            Particles.emit(randInt(30, GAME_W - 30), randInt(30, GAME_H - 30), 4, ['#ff3333', '#ffcc00', '#00ff00', '#00ccff', '#ff66ff'], 3, 35);
+
+        // Phase 2 (40+): victory screen with tally
+        ctx.fillStyle = '#000011'; ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+        // Starfield celebration
+        for (let i = 0; i < 30; i++) {
+            const sx = (i * 37 + t * 0.5) % GAME_W;
+            const sy = (i * 53 + Math.sin(i + t * 0.03) * 15) % GAME_H;
+            ctx.fillStyle = i % 4 === 0 ? '#ffcc00' : i % 3 === 0 ? '#00ccff' : '#ffffff33';
+            ctx.fillRect(sx, sy, i % 5 === 0 ? 2 : 1, 1);
+        }
+
+        // Lux victory pose (centered, bouncing)
+        const luxY = 30 + Math.sin(t * 0.05) * 4;
+        const luxSprite = LuxSprites.jumpR();
+        ctx.drawImage(luxSprite, GAME_W / 2 - 8, luxY);
+
+        // Radiating light from Lux
+        ctx.globalAlpha = 0.15 + Math.sin(t * 0.08) * 0.05;
+        const rayColors = ['#ff444444', '#ffcc4444', '#44ff4444', '#44ccff44', '#ff44ff44'];
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2 + t * 0.02;
+            const rx = GAME_W / 2 + Math.cos(angle) * (40 + t * 0.3);
+            const ry = 38 + Math.sin(angle) * (20 + t * 0.15);
+            ctx.fillStyle = rayColors[i % rayColors.length];
+            ctx.fillRect(rx - 1, ry - 1, 3, 3);
+        }
+        ctx.globalAlpha = 1;
+
+        // Title
+        const titleBounce = Math.sin(t * 0.06) * 2;
+        drawText(ctx, 'LEVEL CLEAR!', GAME_W / 2, 65 + titleBounce, '#ffcc00', 3, 'center');
+
+        // Level name
+        drawText(ctx, level.name, GAME_W / 2, 92, '#aaaacc', 1, 'center');
+
+        // Tally with counting effect
+        const tallyStart = 60;
+        if (t > tallyStart) {
+            const tallyT = t - tallyStart;
+            // Score counts up
+            const displayScore = Math.min(this.score, Math.floor(tallyT * 15));
+            drawText(ctx, 'SCORE', GAME_W / 2, 112, '#667788', 1, 'center');
+            drawText(ctx, '' + displayScore, GAME_W / 2, 125, '#00ffff', 2, 'center');
+        }
+        if (t > tallyStart + 30) {
+            drawText(ctx, 'COINS: ' + this.coins, GAME_W / 2 - 40, 152, '#ffcc00', 1);
+            drawText(ctx, 'LIVES: ' + this.lives, GAME_W / 2 + 20, 152, '#ff6666', 1);
+        }
+
+        // Science fact
+        if (t > tallyStart + 50) {
+            drawText(ctx, 'SCIENCE MASTERED:', GAME_W / 2, 172, '#888888', 1, 'center');
+            drawText(ctx, world.scienceConcept, GAME_W / 2, 185, '#44ffaa', 1, 'center');
+        }
+
+        // Inventory additions
+        if (t > tallyStart + 70 && this.inventory.length > 0) {
+            drawText(ctx, 'ITEMS: ' + this.inventory.map(i => i.name).join(', '), GAME_W / 2, 202, '#ffcc88', 1, 'center');
+        }
+
+        // Continue prompt
+        if (this._levelClearTimer < 140 && this.frame % 50 < 30) {
+            drawText(ctx, 'PRESS SPACE', GAME_W / 2, GAME_H - 18, '#555566', 1, 'center');
+        }
+
+        // Celebration particles
+        if (this.frame % 8 === 0) {
+            Particles.emit(randInt(20, GAME_W - 20), randInt(10, GAME_H - 30), 3,
+                ['#ff3333', '#ffcc00', '#00ff00', '#00ccff', '#ff66ff'], 2.5, 40);
         }
         Particles.draw(ctx, 0, 0);
     },
